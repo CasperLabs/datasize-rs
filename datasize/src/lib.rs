@@ -1,22 +1,147 @@
+//! Heap data estimator.
+//!
+//! The `datasize` crate allows estimating the amount of heap memory used by a value. It does so by
+//! providing or deriving an implementation of the `DataSize` trait, which knows how to calculate
+//! the size for many `std` types and primitives.
+//!
+//! The aim is to get a reasonable approximation of memory usage, especially with variably sized
+//! types like `Vec`s. While it is acceptable to be a few bytes off in some cases, any user should
+//! be able to easily tell whether their memory is growing linearly or logarithmically by glancing
+//! at the reported numbers.
+//!
+//! The crate does not take alignment or memory layouts into account, or unusual behavior or
+//! optimizations of allocators. It is depending entirely on the data inside the type, thus the name
+//! of the crate.
+//!
+//! # General usage
+//!
+//! For any type that implements `DataSize`, the `data_size` convenience function can be used to
+//! guess the size of its heap allocation:
+//!
+//! ```rust
+//! use datasize::data_size;
+//!
+//! let data: Vec<u64> = vec![1, 2, 3];
+//! assert_eq!(data_size(&data), 24);
+//! ```
+//!
+//! Types implementing the trait also provide two additional constants, `IS_DYNAMIC` and
+//! `STATIC_HEAP_SIZE`.
+//!
+//! `IS_DYNAMIC` indicates whether a value's size can change over time:
+//!
+//! ```rust
+//! use datasize::DataSize;
+//!
+//! // A `Vec` of any kind may have elements added or removed, so it changes size.
+//! assert!(Vec::<u64>::IS_DYNAMIC);
+//!
+//! // The elements of type `u64` in it are not dynamic. This allows the implementation to
+//! // simply estimate the size as number_of_elements * size_of::<u64>.
+//! assert!(!u64::IS_DYNAMIC);
+//! ```
+//!
+//! Additionally, `STATIC_HEAP_SIZE` indicates the amount of heap memory a type will always use. A
+//! good example is a `Box<u64>` -- it will always use 8 bytes of heap memory, but not change in
+//! size:
+//!
+//!
+//! ```rust
+//! use datasize::DataSize;
+//!
+//! assert_eq!(Box::<u64>::STATIC_HEAP_SIZE, 8);
+//! assert!(!Box::<u64>::IS_DYNAMIC);
+//! ```
+//!
+//! # Implementing `DataSize` for custom types
+//!
+//! The `DataSize` trait can be implemented for custom types manually:
+//!
+//! ```rust
+//! # use datasize::{DataSize, data_size};
+//! struct MyType {
+//!     items: Vec<i64>,
+//!     flag: bool,
+//!     counter: Box<u64>,
+//! }
+//!
+//! impl DataSize for MyType {
+//!     // `MyType` contains a `Vec`, so `IS_DYNAMIC` is set to true.
+//!     const IS_DYNAMIC: bool = true;
+//!
+//!     // The only always present heap item is the `counter` value, which is 8 bytes.
+//!     const STATIC_HEAP_SIZE: usize = 8;
+//!
+//!     #[inline]
+//!     fn estimate_heap_size(&self) -> usize {
+//!         // We can be lazy here and delegate to all the existing implementations:
+//!         data_size(&self.items) + data_size(&self.flag) + data_size(&self.counter)
+//!     }
+//! }
+//!
+//! let my_data = MyType {
+//!     items: vec![1, 2, 3],
+//!     flag: true,
+//!     counter: Box::new(42),
+//! };
+//!
+//! // Three i64 and one u64 on the heap sum up to 32 bytes:
+//! assert_eq!(data_size(&my_data), 32);
+//! ```
+//!
+//! Since implementing this for `struct` types is cumbersome and repetitive, the crate provides a
+//! `DataSize` macro for convenience:
+//!
+//! ```
+//! # use datasize::{DataSize, data_size};
+//! // Equivalent to the manual implementation above:
+//! #[derive(DataSize)]
+//! struct MyType {
+//!     items: Vec<i64>,
+//!     flag: bool,
+//!     counter: Box<u64>,
+//! }
+//! # let my_data = MyType {
+//! #     items: vec![1, 2, 3],
+//! #     flag: true,
+//! #     counter: Box::new(42),
+//! # };
+//! # assert_eq!(data_size(&my_data), 32);
+//! ```
+//!
+//! See the `DataSize` macro documentation in the `datasize_derive` crate for details.
+//!
+//! ## Performance considerations
+//!
+//! Determining the full size of data can be quite expensive, especially if multiple nested levels
+//! of dynamic types are used. The crate uses `IS_DYNAMIC` and `STATIC_HEAP_SIZE` to optimize when
+//! it can, so in many cases not every element of a vector needs to be checked individually.
+//!
+//! However, if the contained types are dynamic, every element must (and will) be checked, so keep
+//! this in mind when performance is an issue.
+
 pub use datasize_derive::DataSize;
 use std::mem::size_of;
 
 /// Indicates that a type knows how to approximate its memory usage.
 pub trait DataSize {
-    /// If `true`, the type has a heap size that can vary at runtime, depending on the actual value
-    /// of the type.
+    /// If `true`, the type has a heap size that can vary at runtime, depending on the actual value.
     const IS_DYNAMIC: bool;
 
     /// The amount of space a value of the type _always_ occupies. If `IS_DYNAMIC` is false, this is
     /// the total amount of heap memory occupied by the value. Otherwise this is a lower bound.
     const STATIC_HEAP_SIZE: usize;
 
-    /// Estimate the size of heap memory taken up by this value.
+    /// Estimates the size of heap memory taken up by this value.
     ///
-    /// Does not include data on the stack, use `mem::size_of` to determine it.
+    /// Does not include data on the stack, which is usually determined using `mem::size_of`.
     fn estimate_heap_size(&self) -> usize;
 }
 
+/// Estimates allocated heap data from data of value.
+///
+/// Checks if `T` is dynamic; if it is not, returns `T::STATIC_HEAP_SIZE`. Otherwise delegates to
+/// `T::estimate_heap_size`.
 #[inline]
 pub fn data_size<T>(value: &T) -> usize
 where
@@ -135,7 +260,7 @@ impl<T> DataSize for Option<T>
 where
     T: DataSize,
 {
-    /// Options are only not dynamic if their type has no heap data at all and is not dynamic.
+    // Options are only not dynamic if their type has no heap data at all and is not dynamic.
     const IS_DYNAMIC: bool = (T::IS_DYNAMIC || T::STATIC_HEAP_SIZE > 0);
 
     const STATIC_HEAP_SIZE: usize = 0;

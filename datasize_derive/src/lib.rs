@@ -1,7 +1,13 @@
+//! Proc-macro `DataSize` derive for use with the `datasize` crate.
+
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput, Ident};
 
+/// Automatically derive the `DataSize` trait for a struct.
+///
+/// Supports a single option, `#[datasize(skip)]`. If set on a field, it will be ignored entirely
+/// when deriving the implementation.
 #[proc_macro_derive(DataSize, attributes(data_size))]
 pub fn derive_data_size(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

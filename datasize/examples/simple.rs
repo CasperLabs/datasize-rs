@@ -1,3 +1,5 @@
+//! Simple example demonstrating the use of `datasize`.
+
 use datasize::{data_size, DataSize};
 
 #[derive(DataSize)]
