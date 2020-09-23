@@ -3,6 +3,8 @@ name = "datasize"
 version = "0.1.0"
 authors = ["Marc Brinkmann <marc@casperlabs.io>"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "A simplified heap memory size estimator"
 
 [dependencies]
 datasize_derive = { path = "../datasize_derive" }
