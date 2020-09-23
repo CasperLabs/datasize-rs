@@ -5,3 +5,4 @@ authors = ["Marc Brinkmann <marc@casperlabs.io>"]
 edition = "2018"
 
 [dependencies]
+datasize_derive = { path = "../datasize_derive" }

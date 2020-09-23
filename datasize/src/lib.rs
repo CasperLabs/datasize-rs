@@ -1,7 +1,8 @@
+pub use datasize_derive::DataSize;
 use std::mem::size_of;
 
 /// Indicates that a type knows how to approximate its memory usage.
-pub trait DataSizeOf {
+pub trait DataSize {
     /// If `true`, the type has a heap size that can vary at runtime, depending on the actual value
     /// of the type.
     const IS_DYNAMIC: bool;
@@ -19,7 +20,7 @@ pub trait DataSizeOf {
 #[inline]
 pub fn data_size<T>(value: &T) -> usize
 where
-    T: DataSizeOf,
+    T: DataSize,
 {
     if T::IS_DYNAMIC {
         // The type changes at runtime, so we always have to query the instance.
@@ -32,7 +33,7 @@ where
 
 macro_rules! non_dynamic_const_heap_size {
     ($($ty:ty)*, $sz:expr) => {
-        $(impl DataSizeOf for $ty {
+        $(impl DataSize for $ty {
             const IS_DYNAMIC: bool = false;
             const STATIC_HEAP_SIZE: usize = $sz;
 
@@ -53,8 +54,8 @@ macro_rules! strip_plus {
 
 macro_rules! tuple_heap_size {
     ($($n:tt $name:ident);+) => {
-        impl<$($name),*> DataSizeOf for ($($name),*)
-        where $($name: DataSizeOf),*
+        impl<$($name),*> DataSize for ($($name),*)
+        where $($name: DataSize),*
         {
             const IS_DYNAMIC: bool = $($name::IS_DYNAMIC)|*;
 
@@ -72,9 +73,9 @@ macro_rules! tuple_heap_size {
 macro_rules! array_heap_size {
     ($($n:tt)+) => {
         $(
-        impl<T> DataSizeOf for [T; $n]
+        impl<T> DataSize for [T; $n]
         where
-            T: DataSizeOf,
+            T: DataSize,
         {
             const IS_DYNAMIC: bool = T::IS_DYNAMIC;
 
@@ -83,7 +84,7 @@ macro_rules! array_heap_size {
             #[inline]
             fn estimate_heap_size(&self) -> usize {
                 if T::IS_DYNAMIC {
-                    (&self[..]).iter().map(DataSizeOf::estimate_heap_size).sum()
+                    (&self[..]).iter().map(DataSize::estimate_heap_size).sum()
                 } else {
                     T::STATIC_HEAP_SIZE * $n
                 }
@@ -115,9 +116,9 @@ array_heap_size!(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 2
 
 // COMMONLY USED NON-PRIMITIVE TYPES
 
-impl<T> DataSizeOf for Box<T>
+impl<T> DataSize for Box<T>
 where
-    T: DataSizeOf,
+    T: DataSize,
 {
     const IS_DYNAMIC: bool = T::IS_DYNAMIC;
 
@@ -130,11 +131,12 @@ where
     }
 }
 
-impl<T> DataSizeOf for Option<T>
+impl<T> DataSize for Option<T>
 where
-    T: DataSizeOf,
+    T: DataSize,
 {
-    const IS_DYNAMIC: bool = T::IS_DYNAMIC;
+    /// Options are only not dynamic if their type has no heap data at all and is not dynamic.
+    const IS_DYNAMIC: bool = (T::IS_DYNAMIC || T::STATIC_HEAP_SIZE > 0);
 
     const STATIC_HEAP_SIZE: usize = 0;
 
@@ -148,9 +150,9 @@ where
 
 // CONTAINERS
 
-impl<T> DataSizeOf for Vec<T>
+impl<T> DataSize for Vec<T>
 where
-    T: DataSizeOf,
+    T: DataSize,
 {
     const IS_DYNAMIC: bool = true;
 
@@ -162,7 +164,7 @@ where
         let sz_base = self.capacity() * size_of::<T>();
 
         let sz_used = if T::IS_DYNAMIC {
-            self.iter().map(DataSizeOf::estimate_heap_size).sum()
+            self.iter().map(DataSize::estimate_heap_size).sum()
         } else {
             self.len() * T::STATIC_HEAP_SIZE
         };
@@ -173,12 +175,29 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::DataSizeOf;
+    use crate::{data_size, DataSize};
 
     #[test]
     fn test_for_simple_builtin_types() {
         // We only sample some, as they are all macro generated.
         assert_eq!(1u8.estimate_heap_size(), 0);
         assert_eq!(1u16.estimate_heap_size(), 0);
+    }
+
+    #[test]
+    fn test_box() {
+        let value: Box<u64> = Box::new(1234);
+
+        assert_eq!(data_size::<Box<u64>>(&value), 8);
+        assert_eq!(data_size(&value), 8);
+    }
+
+    #[test]
+    fn test_option_box() {
+        let value_none: Option<Box<u64>> = None;
+        let value_some: Option<Box<u64>> = Some(Box::new(12345));
+
+        assert_eq!(data_size::<Option<Box<u64>>>(&value_none), 0);
+        assert_eq!(data_size::<Option<Box<u64>>>(&value_some), 8);
     }
 }
