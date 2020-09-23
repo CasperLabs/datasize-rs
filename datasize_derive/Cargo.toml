@@ -1,0 +1,10 @@
+[package]
+name = "datasize_derive"
+version = "0.1.0"
+authors = ["Marc Brinkmann <marc@casperlabs.io>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
