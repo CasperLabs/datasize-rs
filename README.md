@@ -2,7 +2,7 @@
 
 The `datasize` crate is used for for estimating the heap memory usage of values, e.g. the number of bytes used by a `Vec` outside its on-stack size determined by `mem::size_of`.
 
-`datasize` is intended for rough benchmarks, typically to find memory hogs (it won't find memory leaks as, as memory that is not reachable will not be reported). While it may not give entirely accurate readings in all situations, it will quickly identify low-hanging fruits.
+`datasize` is intended for rough benchmarks, typically to find memory hogs (it won't find memory leaks, as memory that is not reachable will not be reported). While it may not give entirely accurate readings in all situations, it will quickly identify low-hanging fruit.
 
 ## Example
 
