@@ -1,4 +1,4 @@
-# data_size::<T>(&T)
+# data_size::&lt;T&gt;(&T)
 
 The `datasize` crate is used for for estimating the heap memory usage of values, e.g. the number of bytes used by a `Vec` outside its on-stack size determined by `mem::size_of`.
 
