@@ -216,24 +216,33 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
         where_clause.extend(quote!(where #where_types));
     }
 
+    // TODO: Accurately determine `IS_DYNAMIC` and `STATIC_HEAP_SIZE`.
+    //
+    //       It is possible to accurately pre-calculate these, but it takes a bit of extra
+    //       effort. `IS_DYNAMIC` depends on none of the variants (and their fields) being
+    //       being dynamic, as well as all having the same `STATIC_HEAP_SIZE`.
+    //
+    //       `STATIC_HEAP_SIZE` in turn is the minimum of `STATIC_HEAP_SIZE` of every
+    //       variant (which are the sum of their fields). `min` can be determiend by the
+    //       following `const fn`:
+    //
+    //           const fn min(a: usize, b: usize) -> usize {
+    //               [a, b][(a > b) as usize]
+    //           }
+    let mut is_dynamic = true;
+    let static_heap_size = 0usize;
+
+    // Handle enums with no fields.
+    if match_arms.is_empty() {
+        match_arms.extend(quote!(_ => 0));
+        is_dynamic = false;
+    }
+
     TokenStream::from(quote! {
         impl #generics DataSize for #name #generics #where_clause {
-            // TODO: Accurately determine `IS_DYNAMIC` and `STATIC_HEAP_SIZE`.
-            //
-            //       It is possible to accurately pre-calculate these, but it takes a bit of extra
-            //       effort. `IS_DYNAMIC` depends on none of the variants (and their fields) being
-            //       being dynamic, as well as all having the same `STATIC_HEAP_SIZE`.
-            //
-            //       `STATIC_HEAP_SIZE` in turn is the minimum of `STATIC_HEAP_SIZE` of every
-            //       variant (which are the sum of their fields). `min` can be determiend by the
-            //       following `const fn`:
-            //
-            //           const fn min(a: usize, b: usize) -> usize {
-            //               [a, b][(a > b) as usize]
-            //           }
 
-            const IS_DYNAMIC: bool = true;
-            const STATIC_HEAP_SIZE: usize = 0;
+            const IS_DYNAMIC: bool = #is_dynamic;
+            const STATIC_HEAP_SIZE: usize = #static_heap_size;
 
             #[inline]
             fn estimate_heap_size(&self) -> usize {

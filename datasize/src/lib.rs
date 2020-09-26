@@ -477,7 +477,13 @@ mod tests {
 
     #[test]
     fn test_empty_enum() {
-        todo!()
+        #[derive(DataSize)]
+        enum Foo {}
+
+        assert!(!Foo::IS_DYNAMIC);
+        assert_eq!(Foo::STATIC_HEAP_SIZE, 0);
+
+        // We cannot instantiate empty enums.
     }
 
     #[test]
