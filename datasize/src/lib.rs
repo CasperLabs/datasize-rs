@@ -125,7 +125,7 @@
 //! Any reference will be counted as having a data size of 0, as it does not own the value. There
 //! are some special reference-like types like `Arc`, which are discussed below.
 //!
-//! ### `Arc`
+//! ### `Arc` and `Rc`
 //!
 //! Currently `Arc`s are not supported. A planned development is to allow users to mark an instance
 //! of an `Arc` as "primary" and have its heap memory usage counted, but currently this is not
@@ -133,6 +133,8 @@
 //!
 //! Any `Arc` will be estimated to have a heap size of `0`, to avoid cycles resulting in infinite
 //! loops.
+//!
+//! The `Rc` type is handled in the same manner.
 //!
 //! ## Additional types
 //!
@@ -160,7 +162,7 @@
 mod tokio;
 
 pub use datasize_derive::DataSize;
-use std::{mem::size_of, sync::Arc};
+use std::{mem::size_of, rc::Rc, sync::Arc};
 
 /// Indicates that a type knows how to approximate its memory usage.
 pub trait DataSize {
@@ -356,6 +358,16 @@ where
 
 // Please see the notes in the module docs on why Arcs are not counted.
 impl<T> DataSize for Arc<T> {
+    const IS_DYNAMIC: bool = false;
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        0
+    }
+}
+
+impl<T> DataSize for Rc<T> {
     const IS_DYNAMIC: bool = false;
     const STATIC_HEAP_SIZE: usize = 0;
 
