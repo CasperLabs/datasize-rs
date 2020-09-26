@@ -435,6 +435,7 @@ mod tests {
             Baz {
                 boxed: Box<A>,
                 #[data_size(skip)]
+                #[allow(dead_code)]
                 extra: Box<B>,
             },
             Bert(Vec<A>, #[data_size(skip)] Vec<D>, Box<A>),
