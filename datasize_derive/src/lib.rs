@@ -4,6 +4,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
     parse_macro_input, AttrStyle, Attribute, DataEnum, DataStruct, DeriveInput, Generics, Ident,
+    Index,
 };
 
 /// Automatically derive the `DataSize` trait for a type.
@@ -56,7 +57,11 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
     let mut static_heap_size = proc_macro2::TokenStream::new();
     let mut dynamic_size = proc_macro2::TokenStream::new();
 
-    for field in fields.iter().filter(|f| !should_skip(&f.attrs)) {
+    for (idx, field) in fields
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| !should_skip(&f.attrs))
+    {
         // We need a where clause for every non-skipped field. It is harmless to add the type
         // constraint for fields that do not have generic arguments though.
         if where_clauses.is_empty() {
@@ -88,9 +93,10 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
         static_heap_size.extend(quote!(::STATIC_HEAP_SIZE));
 
         let handle = if let Some(ref ident) = &field.ident {
-            ident
+            quote!(#ident)
         } else {
-            todo!();
+            let idx = Index::from(idx);
+            quote!(#idx)
         };
 
         dynamic_size.extend(quote!(

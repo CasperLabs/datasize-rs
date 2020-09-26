@@ -488,6 +488,26 @@ mod tests {
     }
 
     #[test]
+    fn test_newtype_struct() {
+        #[derive(DataSize)]
+        struct Foo(u32);
+
+        assert!(!Foo::IS_DYNAMIC);
+        assert_eq!(Foo::STATIC_HEAP_SIZE, 0);
+        assert_eq!(data_size(&Foo(123)), 0);
+    }
+
+    #[test]
+    fn test_generic_newtype_struct() {
+        #[derive(DataSize)]
+        struct Foo<T>(T);
+
+        assert!(!Foo::<Box<u32>>::IS_DYNAMIC);
+        assert_eq!(Foo::<Box<u32>>::STATIC_HEAP_SIZE, 4);
+        assert_eq!(data_size(&Foo(Box::new(123))), 4);
+    }
+
+    #[test]
     fn test_empty_struct() {
         #[derive(DataSize)]
         struct Foo {}
