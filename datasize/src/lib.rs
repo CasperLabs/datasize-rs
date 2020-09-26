@@ -456,4 +456,27 @@ mod tests {
         let skipped: Foo<u8, u16, u32, u64> = Foo::Skipped(vec![1, 1, 99, 100]);
         assert_eq!(data_size(&skipped), 0);
     }
+
+    #[test]
+    fn macro_does_not_panic_on_foreign_attributes() {
+        #[derive(DataSize)]
+        /// This docstring shows up as `#[doc = ""]`...
+        struct Foo {
+            /// This docstring shows up as `#[doc = ""]`...
+            dummy: u8,
+        }
+    }
+
+    // TODO: This does not work, the equivalent should be constructed using `trybuild`.
+    // #[test]
+    // #[should_panic = "unexpected datasize attribute"]
+    // fn macro_panics_on_invalid_data_size_attribute() {
+    //     #[derive(DataSize)]
+    //     /// This docstring shows up as `#[doc = ""]`...
+    //     struct Foo {
+    //         #[data_size(invalid)]
+    //         /// This docstring shows up as `#[doc = ""]`...
+    //         dummy: u8,
+    //     }
+    // }
 }

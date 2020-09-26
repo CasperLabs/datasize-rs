@@ -2,7 +2,9 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Attribute, DataEnum, DataStruct, DeriveInput, Generics, Ident};
+use syn::{
+    parse_macro_input, AttrStyle, Attribute, DataEnum, DataStruct, DeriveInput, Generics, Ident,
+};
 
 /// Automatically derive the `DataSize` trait for a type.
 ///
@@ -22,12 +24,20 @@ pub fn derive_data_size(input: TokenStream) -> TokenStream {
 /// Determines if attributes contain `#[data_size(skip)]`.
 fn should_skip(attrs: &Vec<Attribute>) -> bool {
     for attr in attrs {
+        if attr.style != AttrStyle::Outer {
+            // We ignore out attributes.
+            continue;
+        }
+
+        // Ensure it is a `data_size` attribute.
+        if attr.path.segments.len() != 1 || attr.path.segments[0].ident.to_string() != "data_size" {
+            continue;
+        }
+
         let parsed: Ident = attr
             .parse_args()
             .expect("could not parse datasize attribute");
 
-        // Quick hack to save us from writing an actual parser. This will need to rewritten once
-        // we add additional attributes.
         match parsed.to_string().as_str() {
             "skip" => return true,
             s => panic!(format!("unexpected datasize attribute {}", s)),
