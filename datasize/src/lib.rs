@@ -298,6 +298,36 @@ where
     }
 }
 
+impl DataSize for String {
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    fn estimate_heap_size(&self) -> usize {
+        self.capacity()
+    }
+}
+
+impl DataSize for std::path::PathBuf {
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    fn estimate_heap_size(&self) -> usize {
+        self.capacity()
+    }
+}
+
+impl DataSize for std::ffi::OsString {
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    fn estimate_heap_size(&self) -> usize {
+        self.capacity()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate as datasize; // Required for the derive macro.
