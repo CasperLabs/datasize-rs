@@ -504,7 +504,30 @@ mod tests {
 
         assert!(!Foo::<Box<u32>>::IS_DYNAMIC);
         assert_eq!(Foo::<Box<u32>>::STATIC_HEAP_SIZE, 4);
-        assert_eq!(data_size(&Foo(Box::new(123))), 4);
+        assert_eq!(data_size(&Foo(Box::new(123u32))), 4);
+    }
+
+    #[test]
+    fn test_tuple_struct() {
+        #[derive(DataSize)]
+        struct Foo(u32, u8);
+
+        assert!(!Foo::IS_DYNAMIC);
+        assert_eq!(Foo::STATIC_HEAP_SIZE, 0);
+        assert_eq!(data_size(&Foo(123, 45)), 0);
+    }
+
+    #[test]
+    fn test_generic_tuple_struct() {
+        #[derive(DataSize)]
+        struct Foo<T>(T, Box<u8>, #[data_size(skip)] Box<u32>);
+
+        assert!(!Foo::<Box<u32>>::IS_DYNAMIC);
+        assert_eq!(Foo::<Box<u32>>::STATIC_HEAP_SIZE, 5);
+        assert_eq!(
+            data_size(&Foo(Box::new(123u32), Box::new(45), Box::new(0))),
+            5
+        );
     }
 
     #[test]
