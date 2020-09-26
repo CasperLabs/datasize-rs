@@ -14,7 +14,7 @@ pub fn derive_data_size(input: TokenStream) -> TokenStream {
 
     match input.data {
         syn::Data::Struct(ds) => derive_for_struct(input.ident, input.generics, ds),
-        syn::Data::Enum(de) => derive_for_enum(input.ident, de),
+        syn::Data::Enum(de) => derive_for_enum(input.ident, input.generics, de),
         syn::Data::Union(_) => panic!("unions not supported"),
     }
 }
@@ -56,7 +56,7 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
         let ty = &field.ty;
 
         where_clauses.extend(quote!(
-            #ty : DataSize,
+            #ty : datasize::DataSize,
         ));
 
         if !is_dynamic.is_empty() {
@@ -101,8 +101,9 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
 }
 
 /// Derives `DataSize` for an `enum`
-fn derive_for_enum(name: Ident, de: DataEnum) -> TokenStream {
+fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream {
     let mut match_arms = proc_macro2::TokenStream::new();
+    let mut where_types = proc_macro2::TokenStream::new();
 
     let mut skipped = false;
     for variant in de.variants.into_iter() {
@@ -128,6 +129,9 @@ fn derive_for_enum(name: Ident, de: DataEnum) -> TokenStream {
                         left.extend(quote!(#ident:_));
                     } else {
                         left.extend(quote!(#ident ,));
+
+                        let ty = field.ty;
+                        where_types.extend(quote!(#ty : datasize::DataSize,));
                     }
 
                     if !skip {
@@ -159,6 +163,9 @@ fn derive_for_enum(name: Ident, de: DataEnum) -> TokenStream {
                             field_calc.extend(quote!(+));
                         }
                         field_calc.extend(quote!(DataSize::estimate_heap_size(#ident)));
+
+                        let ty = field.ty;
+                        where_types.extend(quote!(#ty : datasize::DataSize,));
                     }
                 }
 
@@ -183,8 +190,13 @@ fn derive_for_enum(name: Ident, de: DataEnum) -> TokenStream {
         })
     }
 
+    let mut where_clause = proc_macro2::TokenStream::new();
+    if !where_types.is_empty() {
+        where_clause.extend(quote!(where #where_types));
+    }
+
     TokenStream::from(quote! {
-        impl DataSize for #name {
+        impl #generics DataSize for #name #generics #where_clause {
             // TODO: Accurately determine `IS_DYNAMIC` and `STATIC_HEAP_SIZE`.
             //
             //       It is possible to accurately pre-calculate these, but it takes a bit of extra

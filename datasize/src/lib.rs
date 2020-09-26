@@ -427,4 +427,32 @@ mod tests {
         };
         assert_eq!(data_size(&both), 5);
     }
+
+    #[test]
+    fn test_generic_enum() {
+        #[derive(DataSize)]
+        enum Foo<A, B, C, D> {
+            Baz {
+                boxed: Box<A>,
+                #[data_size(skip)]
+                extra: Box<B>,
+            },
+            Bert(Vec<A>, #[data_size(skip)] Vec<D>, Box<A>),
+            #[data_size(skip)]
+            Skipped(Vec<C>),
+        }
+
+        let baz: Foo<u8, u16, u32, u64> = Foo::Baz {
+            boxed: Box::new(123),
+            extra: Box::new(456),
+        };
+        assert_eq!(data_size(&baz), 1);
+
+        let bert: Foo<u8, u16, u32, u64> =
+            Foo::Bert(vec![5, 6, 7, 8, 9], vec![1, 2, 3, 4, 5], Box::new(1));
+        assert_eq!(data_size(&bert), 5 + 1);
+
+        let skipped: Foo<u8, u16, u32, u64> = Foo::Skipped(vec![1, 1, 99, 100]);
+        assert_eq!(data_size(&skipped), 0);
+    }
 }
