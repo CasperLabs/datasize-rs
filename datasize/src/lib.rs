@@ -219,7 +219,23 @@ macro_rules! array_heap_size {
     };
 }
 
+// Primitives
 non_dynamic_const_heap_size!(() u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize bool char, 0);
+
+// Assorted heapless `std` types
+non_dynamic_const_heap_size!(
+    std::net::Ipv4Addr
+    std::net::Ipv6Addr
+    std::net::SocketAddrV4
+    std::net::SocketAddrV6
+    std::net::IpAddr
+    std::net::SocketAddr
+
+    std::time::Duration
+    std::time::Instant
+    std::time::SystemTime,
+    0
+);
 
 tuple_heap_size!(0 T0; 1 T1);
 tuple_heap_size!(0 T0; 1 T1; 2 T2);
