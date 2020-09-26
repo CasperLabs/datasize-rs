@@ -134,6 +134,22 @@
 //! Some additional types from external crates are available behind feature flags.
 //!
 //! * `tokio-types`: Some types from the `tokio` crate.
+//!
+//! ## Known issues
+//!
+//! The derive macro currently does not support generic structs with inline type bounds, e.g.
+//!
+//! ```ignore
+//! struct Foo<T: Copy> { ... }
+//! ```
+//!
+//! This can be worked around by using an equivalent `where` clause:
+//!
+//! ```ignore
+//! struct Foo<T>
+//! where Foo: Copy
+//! { ... }
+//! ```
 
 #[cfg(feature = "tokio-types")]
 mod tokio;
