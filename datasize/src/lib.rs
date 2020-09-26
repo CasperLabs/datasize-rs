@@ -363,4 +363,37 @@ mod tests {
         ex.my_data.reserve_exact(10);
         assert_eq!(data_size(&ex), 4 + 10 * 8)
     }
+
+    #[test]
+    fn test_enum() {
+        #[derive(Debug, DataSize)]
+        enum Foo {
+            Bar,
+            Baz {
+                boxed: Box<u32>,
+                nonheap: u8,
+                #[data_size(skip)]
+                extra: Box<u128>,
+            },
+            Bert(Vec<u32>, #[data_size(skip)] Vec<u8>),
+            #[data_size(skip)]
+            Skipped(Vec<i32>),
+        }
+
+        let bar = Foo::Bar;
+        assert_eq!(data_size(&bar), 0);
+
+        let baz = Foo::Baz {
+            boxed: Box::new(123),
+            nonheap: 99,
+            extra: Box::new(456),
+        };
+        assert_eq!(data_size(&baz), 4);
+
+        let bert = Foo::Bert(vec![5, 6, 7, 8, 9], vec![1, 2, 3, 4, 5]);
+        assert_eq!(data_size(&bert), 5 * 4);
+
+        let skipped = Foo::Skipped(vec![-1, 1, 99, 100]);
+        assert_eq!(data_size(&skipped), 0);
+    }
 }
