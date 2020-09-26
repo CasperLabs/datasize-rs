@@ -358,8 +358,13 @@ where
 
     fn estimate_heap_size(&self) -> usize {
         let mut size = 0;
-        for (key, value) in self.iter() {
-            size += size_of::<(K, V)>() + key.estimate_heap_size() + value.estimate_heap_size();
+
+        if K::IS_DYNAMIC || V::IS_DYNAMIC {
+            for (key, value) in self.iter() {
+                size += size_of::<(K, V)>() + key.estimate_heap_size() + value.estimate_heap_size();
+            }
+        } else {
+            size += self.len() * (size_of::<(K, V)>() + K::STATIC_HEAP_SIZE + V::STATIC_HEAP_SIZE);
         }
         size
     }
@@ -376,11 +381,17 @@ where
 
     const STATIC_HEAP_SIZE: usize = 0;
 
+    #[inline]
     fn estimate_heap_size(&self) -> usize {
         let size = self.capacity() * (size_of::<V>() + size_of::<K>() + size_of::<usize>());
-        self.iter().fold(size, |n, (key, value)| {
-            n + key.estimate_heap_size() + value.estimate_heap_size()
-        })
+
+        if K::IS_DYNAMIC || V::IS_DYNAMIC {
+            self.iter().fold(size, |n, (key, value)| {
+                n + key.estimate_heap_size() + value.estimate_heap_size()
+            })
+        } else {
+            size + self.capacity() * (K::STATIC_HEAP_SIZE + V::STATIC_HEAP_SIZE)
+        }
     }
 }
 
@@ -394,10 +405,16 @@ where
 
     const STATIC_HEAP_SIZE: usize = 0;
 
+    #[inline]
     fn estimate_heap_size(&self) -> usize {
         let size = self.capacity() * (size_of::<T>() + size_of::<usize>());
-        self.iter()
-            .fold(size, |n, value| n + value.estimate_heap_size())
+
+        if T::IS_DYNAMIC {
+            self.iter()
+                .fold(size, |n, value| n + value.estimate_heap_size())
+        } else {
+            size + self.capacity() * T::STATIC_HEAP_SIZE
+        }
     }
 }
 
