@@ -119,6 +119,15 @@
 //!
 //! However, if the contained types are dynamic, every element must (and will) be checked, so keep
 //! this in mind when performance is an issue.
+//!
+//! ## Additional types
+//!
+//! Some additional types from external crates are available behind feature flags.
+//!
+//! * `tokio-types`: Some types from the `tokio` crate.
+
+#[cfg(feature = "tokio-types")]
+mod tokio;
 
 pub use datasize_derive::DataSize;
 use std::mem::size_of;
