@@ -11,4 +11,4 @@ tokio-types = ["tokio"]
 
 [dependencies]
 datasize_derive = { path = "../datasize_derive" }
-tokio = { version = "0.2.22", default-features = false, optional = true, features = ["sync"] }
+tokio = { version = "0.2.22", default-features = false, optional = true, features = ["rt-core", "sync"] }
