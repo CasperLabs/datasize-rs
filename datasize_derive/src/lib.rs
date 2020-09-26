@@ -2,9 +2,13 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
+use std::collections::HashSet;
 use syn::{
-    parse_macro_input, AttrStyle, Attribute, DataEnum, DataStruct, DeriveInput, Generics, Ident,
-    Index,
+    parse_macro_input, AngleBracketedGenericArguments, AttrStyle, Attribute, Binding, DataEnum,
+    DataStruct, DeriveInput, Generics, Ident, Index, ParenthesizedGenericArguments, Path,
+    PathArguments, ReturnType, TraitBound, Type, TypeArray, TypeBareFn, TypeGroup, TypeImplTrait,
+    TypeParam, TypeParamBound, TypeParen, TypePath, TypePtr, TypeReference, TypeSlice,
+    TypeTraitObject, TypeTuple,
 };
 
 /// Automatically derive the `DataSize` trait for a type.
@@ -19,6 +23,140 @@ pub fn derive_data_size(input: TokenStream) -> TokenStream {
         syn::Data::Struct(ds) => derive_for_struct(input.ident, input.generics, ds),
         syn::Data::Enum(de) => derive_for_enum(input.ident, input.generics, de),
         syn::Data::Union(_) => panic!("unions not supported"),
+    }
+}
+
+/// Returns whether any of the `generics` show up in `ty`.
+///
+/// Used to determine whether or not a specific type needs to be listed in where clauses because it
+/// contains generic types. Note that the function is not entirely accurate and may produce false
+/// postives in some cases.
+fn contains_generic(generics: &Generics, ty: &Type) -> bool {
+    match ty {
+        Type::Array(TypeArray { elem, .. }) => contains_generic(generics, &elem),
+        Type::BareFn(TypeBareFn { inputs, output, .. }) => {
+            for arg in inputs {
+                if contains_generic(&generics, &arg.ty) {
+                    return true;
+                }
+            }
+
+            match output {
+                ReturnType::Default => false,
+                ReturnType::Type(_, ty) => contains_generic(generics, ty),
+            }
+        }
+        Type::Group(TypeGroup { elem, .. }) => contains_generic(generics, elem),
+        Type::ImplTrait(TypeImplTrait { bounds, .. }) => bounds
+            .iter()
+            .any(|b| param_bound_contains_generic(generics, b)),
+        Type::Infer(_) => false,
+        Type::Macro(_) => true,
+        Type::Never(_) => false,
+        Type::Paren(TypeParen { elem, .. }) => contains_generic(generics, elem),
+        Type::Path(TypePath { path, .. }) => path_contains_generic(generics, path),
+        Type::Ptr(TypePtr { elem, .. }) => contains_generic(generics, elem),
+        Type::Reference(TypeReference { elem, .. }) => contains_generic(generics, elem),
+        Type::Slice(TypeSlice { elem, .. }) => contains_generic(generics, elem),
+        Type::TraitObject(TypeTraitObject { bounds, .. }) => bounds
+            .iter()
+            .any(|b| param_bound_contains_generic(generics, b)),
+        Type::Tuple(TypeTuple { elems, .. }) => {
+            elems.iter().any(|ty| contains_generic(generics, ty))
+        }
+        // Nothing we can do here, err on the side of too many `where` clauses.
+        Type::Verbatim(_) => true,
+        // TODO: This may be problematic, double check if we did not miss anything.
+        _ => true,
+    }
+}
+
+/// Returns whether any of the `generics` show up in a given path.
+///
+/// May yield false positives.
+fn path_contains_generic(generics: &Generics, path: &Path) -> bool {
+    let mut candidates = HashSet::new();
+
+    for segment in &path.segments {
+        candidates.insert(segment.ident.clone());
+
+        match &segment.arguments {
+            PathArguments::None => {}
+            PathArguments::AngleBracketed(AngleBracketedGenericArguments { ref args, .. }) => {
+                for arg in args {
+                    match arg {
+                        syn::GenericArgument::Lifetime(_) => {
+                            // Ignore lifetime args.
+                        }
+                        syn::GenericArgument::Type(ty) => {
+                            // Simply recurse and check directly.
+                            if contains_generic(generics, ty) {
+                                return true;
+                            }
+                        }
+                        syn::GenericArgument::Binding(Binding {
+                            // We can ignore the ident here, as it is local.
+                            ty,
+                            ..
+                        }) => {
+                            // Again, exit early with `true` if we find a match.
+                            if contains_generic(generics, ty) {
+                                return true;
+                            }
+                        }
+                        syn::GenericArgument::Constraint(_) => {
+                            // Additional constraints are fine?
+                        }
+                        syn::GenericArgument::Const(_) => {
+                            // Constants do not require `DataSize` impls.
+                        }
+                    }
+                }
+            }
+            syn::PathArguments::Parenthesized(ParenthesizedGenericArguments {
+                inputs,
+                output,
+                ..
+            }) => {
+                if inputs.iter().any(|ty| contains_generic(generics, ty)) {
+                    return true;
+                }
+
+                match output {
+                    ReturnType::Default => {}
+                    ReturnType::Type(_, ref ty) => {
+                        if contains_generic(generics, ty) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let generic_idents: HashSet<_> = generics
+        .params
+        .iter()
+        .filter_map(|gen| match gen {
+            syn::GenericParam::Type(TypeParam { ident, .. }) => Some(ident.clone()),
+            syn::GenericParam::Lifetime(_) => None,
+            syn::GenericParam::Const(_) => None,
+        })
+        .collect();
+
+    // If we find at least one generic in all of the types, we return `true` here.
+    candidates.intersection(&generic_idents).next().is_some()
+}
+
+/// Returns whether any of the `generics` show up in a type parameter binding.
+///
+/// May return false positives.
+fn param_bound_contains_generic(generics: &Generics, bound: &TypeParamBound) -> bool {
+    match bound {
+        syn::TypeParamBound::Trait(TraitBound { path, .. }) => {
+            path_contains_generic(generics, path)
+        }
+        syn::TypeParamBound::Lifetime(_) => false,
     }
 }
 
@@ -62,17 +200,19 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
         .enumerate()
         .filter(|(_, f)| !should_skip(&f.attrs))
     {
-        // We need a where clause for every non-skipped field. It is harmless to add the type
-        // constraint for fields that do not have generic arguments though.
-        if where_clauses.is_empty() {
-            where_clauses.extend(quote!(where));
-        }
-
         let ty = &field.ty;
+        // We need a where clause for every non-skipped field. We try our best to filter out bounds
+        // here that are not needed (e.g. `u8: DataSize`), as they can be problematic when mixing
+        // `pub(super)` and `pub` visiblity restrictions.
+        if contains_generic(&generics, ty) {
+            if where_clauses.is_empty() {
+                where_clauses.extend(quote!(where));
+            }
 
-        where_clauses.extend(quote!(
-            #ty : datasize::DataSize,
-        ));
+            where_clauses.extend(quote!(
+                #ty : datasize::DataSize,
+            ));
+        }
 
         if !is_dynamic.is_empty() {
             is_dynamic.extend(quote!(|));
@@ -158,7 +298,9 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
                         left.extend(quote!(#ident ,));
 
                         let ty = field.ty;
-                        where_types.extend(quote!(#ty : datasize::DataSize,));
+                        if contains_generic(&generics, &ty) {
+                            where_types.extend(quote!(#ty : datasize::DataSize,));
+                        }
                     }
 
                     if !skip {
