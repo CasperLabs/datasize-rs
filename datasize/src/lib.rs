@@ -174,6 +174,8 @@ where
     }
 }
 
+/// Helper macro to define a heap size for one or more non-dynamic types.
+#[macro_export]
 macro_rules! non_dynamic_const_heap_size {
     ($($ty:ty)*, $sz:expr) => {
         $(impl DataSize for $ty {
