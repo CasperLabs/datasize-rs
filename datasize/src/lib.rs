@@ -344,6 +344,63 @@ impl DataSize for std::ffi::OsString {
     }
 }
 
+impl<K, V> DataSize for std::collections::BTreeMap<K, V>
+where
+    K: DataSize,
+    V: DataSize,
+{
+    // Approximation directly taken from
+    // https://github.com/servo/heapsize/blob/f565dda63cc12c2a088bc9974a1b584cddec4382/src/lib.rs#L295-L306
+
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    fn estimate_heap_size(&self) -> usize {
+        let mut size = 0;
+        for (key, value) in self.iter() {
+            size += size_of::<(K, V)>() + key.estimate_heap_size() + value.estimate_heap_size();
+        }
+        size
+    }
+}
+
+impl<K, V, S> DataSize for std::collections::HashMap<K, V, S>
+where
+    K: DataSize,
+    V: DataSize,
+{
+    // Approximation directly taken from
+    // https://github.com/servo/heapsize/blob/f565dda63cc12c2a088bc9974a1b584cddec4382/src/lib.rs#L266-L275
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    fn estimate_heap_size(&self) -> usize {
+        let size = self.capacity() * (size_of::<V>() + size_of::<K>() + size_of::<usize>());
+        self.iter().fold(size, |n, (key, value)| {
+            n + key.estimate_heap_size() + value.estimate_heap_size()
+        })
+    }
+}
+
+impl<T, S> DataSize for std::collections::HashSet<T, S>
+where
+    T: DataSize,
+{
+    // Approximation directly taken from
+    // https://github.com/servo/heapsize/blob/f565dda63cc12c2a088bc9974a1b584cddec4382/src/lib.rs#L255-L264
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    fn estimate_heap_size(&self) -> usize {
+        let size = self.capacity() * (size_of::<T>() + size_of::<usize>());
+        self.iter()
+            .fold(size, |n, value| n + value.estimate_heap_size())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate as datasize; // Required for the derive macro.
