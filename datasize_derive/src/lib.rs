@@ -2,7 +2,7 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, Attribute, DataEnum, DataStruct, DeriveInput, Ident};
+use syn::{parse_macro_input, Attribute, DataEnum, DataStruct, DeriveInput, Generics, Ident};
 
 /// Automatically derive the `DataSize` trait for a type.
 ///
@@ -13,7 +13,7 @@ pub fn derive_data_size(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     match input.data {
-        syn::Data::Struct(ds) => derive_for_struct(input.ident, ds),
+        syn::Data::Struct(ds) => derive_for_struct(input.ident, input.generics, ds),
         syn::Data::Enum(de) => derive_for_enum(input.ident, de),
         syn::Data::Union(_) => panic!("unions not supported"),
     }
@@ -38,14 +38,27 @@ fn should_skip(attrs: &Vec<Attribute>) -> bool {
 }
 
 /// Derives `DataSize` for a `struct`
-fn derive_for_struct(name: Ident, ds: DataStruct) -> TokenStream {
+fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenStream {
     let fields = ds.fields;
 
+    let mut where_clauses = proc_macro2::TokenStream::new();
     let mut is_dynamic = proc_macro2::TokenStream::new();
     let mut static_heap_size = proc_macro2::TokenStream::new();
     let mut dynamic_size = proc_macro2::TokenStream::new();
 
     for field in fields.iter().filter(|f| !should_skip(&f.attrs)) {
+        // We need a where clause for every non-skipped field. It is harmless to add the type
+        // constraint for fields that do not have generic arguments though.
+        if where_clauses.is_empty() {
+            where_clauses.extend(quote!(where));
+        }
+
+        let ty = &field.ty;
+
+        where_clauses.extend(quote!(
+            #ty : DataSize,
+        ));
+
         if !is_dynamic.is_empty() {
             is_dynamic.extend(quote!(|));
         }
@@ -58,7 +71,6 @@ fn derive_for_struct(name: Ident, ds: DataStruct) -> TokenStream {
             dynamic_size.extend(quote!(+));
         }
 
-        let ty = &field.ty;
         is_dynamic.extend(quote!(<#ty as datasize::DataSize>));
         is_dynamic.extend(quote!(::IS_DYNAMIC));
 
@@ -77,7 +89,7 @@ fn derive_for_struct(name: Ident, ds: DataStruct) -> TokenStream {
     }
 
     TokenStream::from(quote! {
-        impl datasize::DataSize for #name {
+        impl #generics datasize::DataSize for #name #generics #where_clauses {
             const IS_DYNAMIC: bool = #is_dynamic;
             const STATIC_HEAP_SIZE: usize = #static_heap_size;
 

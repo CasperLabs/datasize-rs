@@ -396,4 +396,35 @@ mod tests {
         let skipped = Foo::Skipped(vec![-1, 1, 99, 100]);
         assert_eq!(data_size(&skipped), 0);
     }
+
+    #[test]
+    fn test_generic_struct() {
+        #[derive(DataSize)]
+        struct Example<A, B> {
+            a: Option<A>,
+            b: Option<B>,
+            c: u8,
+        }
+
+        let none: Example<Box<u32>, Box<u8>> = Example {
+            a: None,
+            b: None,
+            c: 123,
+        };
+        assert_eq!(data_size(&none), 0);
+
+        let a: Example<Box<u32>, Box<u8>> = Example {
+            a: Some(Box::new(0)),
+            b: None,
+            c: 123,
+        };
+        assert_eq!(data_size(&a), 4);
+
+        let both: Example<Box<u32>, Box<u8>> = Example {
+            a: Some(Box::new(0)),
+            b: Some(Box::new(0)),
+            c: 123,
+        };
+        assert_eq!(data_size(&both), 5);
+    }
 }
