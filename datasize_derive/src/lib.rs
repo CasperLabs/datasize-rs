@@ -98,6 +98,17 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
         ));
     }
 
+    // Handle structs with no fields.
+    if is_dynamic.is_empty() {
+        is_dynamic.extend(quote!(false));
+    }
+    if static_heap_size.is_empty() {
+        static_heap_size.extend(quote!(0));
+    }
+    if dynamic_size.is_empty() {
+        dynamic_size.extend(quote!(0));
+    }
+
     TokenStream::from(quote! {
         impl #generics datasize::DataSize for #name #generics #where_clauses {
             const IS_DYNAMIC: bool = #is_dynamic;

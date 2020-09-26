@@ -458,6 +458,29 @@ mod tests {
     }
 
     #[test]
+    fn test_empty_struct() {
+        #[derive(DataSize)]
+        struct Foo {}
+
+        #[derive(DataSize)]
+        struct Bar;
+
+        assert!(!Foo::IS_DYNAMIC);
+        assert!(!Bar::IS_DYNAMIC);
+
+        assert_eq!(Foo::STATIC_HEAP_SIZE, 0);
+        assert_eq!(Bar::STATIC_HEAP_SIZE, 0);
+
+        assert_eq!(data_size(&Foo {}), 0);
+        assert_eq!(data_size(&Bar), 0);
+    }
+
+    #[test]
+    fn test_empty_enum() {
+        todo!()
+    }
+
+    #[test]
     fn macro_does_not_panic_on_foreign_attributes() {
         #[derive(DataSize)]
         /// This docstring shows up as `#[doc = ""]`...
