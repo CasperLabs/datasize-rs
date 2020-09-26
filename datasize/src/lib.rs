@@ -120,7 +120,12 @@
 //! However, if the contained types are dynamic, every element must (and will) be checked, so keep
 //! this in mind when performance is an issue.
 //!
-//! ## Handlings `Arc`s and similar types
+//! ## Handlings references, `Arc`s and similar types
+//!
+//! Any reference will be counted as having a data size of 0, as it does not own the value. There
+//! are some special reference-like types like `Arc`, which are discussed below.
+//!
+//! ### `Arc`
 //!
 //! Currently `Arc`s are not supported. A planned development is to allow users to mark an instance
 //! of an `Arc` as "primary" and have its heap memory usage counted, but currently this is not
@@ -290,6 +295,30 @@ tuple_heap_size!(0 T0; 1 T1; 2 T2; 3 T3; 4 T4; 5 T5; 6 T6; 7 T7; 8 T8; 9 T9; 10 
 tuple_heap_size!(0 T0; 1 T1; 2 T2; 3 T3; 4 T4; 5 T5; 6 T6; 7 T7; 8 T8; 9 T9; 10 T10; 11 T11; 12 T12; 13 T13; 14 T14; 15 T15);
 
 array_heap_size!(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 128 192 256 384 512 1024 2048 4096 8192 16384 1048576 2097152 3145728 4194304);
+
+// REFERENCES
+
+impl<T> DataSize for &T {
+    const IS_DYNAMIC: bool = false;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        0
+    }
+}
+
+impl<T> DataSize for &mut T {
+    const IS_DYNAMIC: bool = false;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        0
+    }
+}
 
 // COMMONLY USED NON-PRIMITIVE TYPES
 
