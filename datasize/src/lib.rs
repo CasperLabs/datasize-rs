@@ -126,6 +126,9 @@
 //! of an `Arc` as "primary" and have its heap memory usage counted, but currently this is not
 //! implemented.
 //!
+//! Any `Arc` will be estimated to have a heap size of `0`, to avoid cycles resulting in infinite
+//! loops.
+//!
 //! ## Additional types
 //!
 //! Some additional types from external crates are available behind feature flags.
@@ -136,7 +139,7 @@
 mod tokio;
 
 pub use datasize_derive::DataSize;
-use std::mem::size_of;
+use std::{mem::size_of, sync::Arc};
 
 /// Indicates that a type knows how to approximate its memory usage.
 pub trait DataSize {
@@ -301,6 +304,17 @@ where
             Some(val) => data_size(val),
             None => 0,
         }
+    }
+}
+
+// Please see the notes in the module docs on why Arcs are not counted.
+impl<T> DataSize for Arc<T> {
+    const IS_DYNAMIC: bool = false;
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        0
     }
 }
 
