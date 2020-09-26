@@ -147,7 +147,7 @@
 //!
 //! ```ignore
 //! struct Foo<T>
-//! where Foo: Copy
+//! where T: Copy
 //! { ... }
 //! ```
 
