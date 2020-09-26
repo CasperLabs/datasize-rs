@@ -8,7 +8,7 @@ use syn::{
     DataStruct, DeriveInput, Generics, Ident, Index, ParenthesizedGenericArguments, Path,
     PathArguments, ReturnType, TraitBound, Type, TypeArray, TypeBareFn, TypeGroup, TypeImplTrait,
     TypeParam, TypeParamBound, TypeParen, TypePath, TypePtr, TypeReference, TypeSlice,
-    TypeTraitObject, TypeTuple,
+    TypeTraitObject, TypeTuple, WhereClause,
 };
 
 /// Automatically derive the `DataSize` trait for a type.
@@ -255,6 +255,12 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
         dynamic_size.extend(quote!(0));
     }
 
+    // Ensure that any `where` clause on the struct itself is preserved, otherwise the impl is
+    // invalid.
+    if let Some(WhereClause { ref predicates, .. }) = generics.where_clause {
+        where_clauses.extend(quote!(#predicates));
+    }
+
     TokenStream::from(quote! {
         impl #generics datasize::DataSize for #name #generics #where_clauses {
             const IS_DYNAMIC: bool = #is_dynamic;
@@ -384,6 +390,11 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
     if match_arms.is_empty() {
         match_arms.extend(quote!(_ => 0));
         is_dynamic = false;
+    }
+
+    // Ensure that any `where` clause on the struct enum is preserved.
+    if let Some(WhereClause { ref predicates, .. }) = generics.where_clause {
+        where_clause.extend(quote!(#predicates));
     }
 
     TokenStream::from(quote! {

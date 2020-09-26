@@ -718,4 +718,28 @@ mod tests {
     //         dummy: u8,
     //     }
     // }
+
+    #[test]
+    fn keeps_where_clauses_on_structs() {
+        #[allow(dead_code)]
+        #[derive(DataSize)]
+        struct Foo<T>
+        where
+            T: Copy,
+        {
+            field: T,
+        }
+    }
+
+    #[test]
+    fn keeps_where_clauses_on_enums() {
+        #[allow(dead_code)]
+        #[derive(DataSize)]
+        enum Foo<T>
+        where
+            T: Copy,
+        {
+            Value(T),
+        }
+    }
 }
