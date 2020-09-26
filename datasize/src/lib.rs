@@ -141,6 +141,7 @@
 //! Some additional types from external crates are available behind feature flags.
 //!
 //! * `tokio-types`: Some types from the `tokio` crate.
+//! * `futures-types`: Some types from the `futures` crate.
 //!
 //! ## Known issues
 //!
@@ -158,6 +159,8 @@
 //! { ... }
 //! ```
 
+#[cfg(feature = "futures")]
+mod futures;
 #[cfg(feature = "tokio-types")]
 mod tokio;
 
