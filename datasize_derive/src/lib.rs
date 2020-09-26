@@ -2,7 +2,7 @@
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Ident};
+use syn::{parse_macro_input, DataStruct, DeriveInput, Ident};
 
 /// Automatically derive the `DataSize` trait for a struct.
 ///
@@ -12,17 +12,19 @@ use syn::{parse_macro_input, DeriveInput, Ident};
 pub fn derive_data_size(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
-    let name = input.ident;
+    match input.data {
+        syn::Data::Struct(ds) => derive_for_struct(input.ident, ds),
+        syn::Data::Enum(de) => panic!("enums not supported"),
+        syn::Data::Union(_) => panic!("unions not supported"),
+    }
+}
+
+fn derive_for_struct(name: Ident, ds: DataStruct) -> TokenStream {
+    let fields = ds.fields;
 
     let mut is_dynamic = proc_macro2::TokenStream::new();
     let mut static_heap_size = proc_macro2::TokenStream::new();
     let mut dynamic_size = proc_macro2::TokenStream::new();
-
-    let fields = match input.data {
-        syn::Data::Struct(ds) => ds.fields,
-        syn::Data::Enum(_) => panic!("enums not supported"),
-        syn::Data::Union(_) => panic!("unions not supported"),
-    };
 
     'outer: for field in fields.iter() {
         for attr in &field.attrs {
