@@ -120,6 +120,12 @@
 //! However, if the contained types are dynamic, every element must (and will) be checked, so keep
 //! this in mind when performance is an issue.
 //!
+//! ## Handlings `Arc`s and similar types
+//!
+//! Currently `Arc`s are not supported. A planned development is to allow users to mark an instance
+//! of an `Arc` as "primary" and have its heap memory usage counted, but currently this is not
+//! implemented.
+//!
 //! ## Additional types
 //!
 //! Some additional types from external crates are available behind feature flags.
