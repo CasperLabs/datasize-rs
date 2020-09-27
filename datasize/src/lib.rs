@@ -168,7 +168,7 @@ mod smallvec;
 mod tokio;
 
 pub use datasize_derive::DataSize;
-use std::{mem::size_of, rc::Rc, sync::Arc};
+use std::mem::size_of;
 
 /// Indicates that a type knows how to approximate its memory usage.
 pub trait DataSize {
@@ -363,7 +363,7 @@ where
 }
 
 // Please see the notes in the module docs on why Arcs are not counted.
-impl<T> DataSize for Arc<T> {
+impl<T> DataSize for std::sync::Arc<T> {
     const IS_DYNAMIC: bool = false;
     const STATIC_HEAP_SIZE: usize = 0;
 
@@ -373,7 +373,7 @@ impl<T> DataSize for Arc<T> {
     }
 }
 
-impl<T> DataSize for Rc<T> {
+impl<T> DataSize for std::rc::Rc<T> {
     const IS_DYNAMIC: bool = false;
     const STATIC_HEAP_SIZE: usize = 0;
 
