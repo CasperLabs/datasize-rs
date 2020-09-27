@@ -1,2 +1,4 @@
-/target
-Cargo.lock
+datasize/target
+datasize_derive/target
+datasize/Cargo.lock
+datasize_derive/Cargo.lock
