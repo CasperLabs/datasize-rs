@@ -140,8 +140,9 @@
 //!
 //! Some additional types from external crates are available behind feature flags.
 //!
-//! * `tokio-types`: Some types from the `tokio` crate.
 //! * `futures-types`: Some types from the `futures` crate.
+//! * `smallvec-types`: Support for the `smallvec::SmallVec` type.
+//! * `tokio-types`: Some types from the `tokio` crate.
 //!
 //! ## Known issues
 //!
@@ -159,8 +160,10 @@
 //! { ... }
 //! ```
 
-#[cfg(feature = "futures")]
+#[cfg(feature = "futures-types")]
 mod futures;
+#[cfg(feature = "smallvec-types")]
+mod smallvec;
 #[cfg(feature = "tokio-types")]
 mod tokio;
 
