@@ -5,6 +5,8 @@ authors = ["Marc Brinkmann <marc@casperlabs.io>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 description = "Derive macros for the `datasize` crate"
+documentation = "https://docs.rs/datasize_derive"
+repository = "https://github.com/casperlabs/datasize-rs"
 
 [lib]
 proc-macro = true

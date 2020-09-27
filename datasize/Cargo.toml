@@ -5,6 +5,8 @@ authors = ["Marc Brinkmann <marc@casperlabs.io>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 description = "A simplified heap memory size estimator"
+documentation = "https://docs.rs/datasize_derive"
+repository = "https://github.com/casperlabs/datasize-rs"
 
 [features]
 fake_clock-types = ["fake_instant"]
