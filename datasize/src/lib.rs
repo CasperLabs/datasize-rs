@@ -418,6 +418,28 @@ where
     }
 }
 
+impl<T> DataSize for std::collections::VecDeque<T>
+where
+    T: DataSize,
+{
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        // We can treat a `VecDeque` exactly the same as a `Vec`.
+        let sz_base = self.capacity() * size_of::<T>();
+
+        let sz_used = if T::IS_DYNAMIC {
+            self.iter().map(DataSize::estimate_heap_size).sum()
+        } else {
+            self.len() * T::STATIC_HEAP_SIZE
+        };
+
+        sz_base + sz_used
+    }
+}
 impl DataSize for String {
     const IS_DYNAMIC: bool = true;
 
