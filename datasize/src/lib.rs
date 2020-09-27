@@ -140,6 +140,7 @@
 //!
 //! Some additional types from external crates are available behind feature flags.
 //!
+//! * `fake_clock-types`: Support for the `fake_instant::FakeClock` type.
 //! * `futures-types`: Some types from the `futures` crate.
 //! * `smallvec-types`: Support for the `smallvec::SmallVec` type.
 //! * `tokio-types`: Some types from the `tokio` crate.
@@ -160,6 +161,8 @@
 //! { ... }
 //! ```
 
+#[cfg(feature = "fake_clock-types")]
+mod fake_clock;
 #[cfg(feature = "futures-types")]
 mod futures;
 #[cfg(feature = "smallvec-types")]
@@ -440,6 +443,7 @@ where
         sz_base + sz_used
     }
 }
+
 impl DataSize for String {
     const IS_DYNAMIC: bool = true;
 
