@@ -9,9 +9,11 @@ documentation = "https://docs.rs/datasize"
 repository = "https://github.com/casperlabs/datasize-rs"
 
 [features]
+default = ["std"]
 fake_clock-types = ["fake_instant"]
 futures-types = ["futures"]
-smallvec-types = ["smallvec"]
+smallvec-types = ["smallvec", "std"]
+std = []
 tokio-types = ["tokio"]
 
 [dependencies]

@@ -1,5 +1,5 @@
 use super::DataSize;
-use std::mem::size_of;
+use core::mem::size_of;
 
 impl<T> DataSize for futures::channel::oneshot::Sender<T> {
     const IS_DYNAMIC: bool = false;
