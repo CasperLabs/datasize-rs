@@ -380,6 +380,16 @@ impl<T> DataSize for Rc<T> {
     }
 }
 
+impl<T> DataSize for std::marker::PhantomData<T> {
+    const IS_DYNAMIC: bool = false;
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        0
+    }
+}
+
 // CONTAINERS
 
 impl<T> DataSize for Vec<T>
