@@ -184,6 +184,11 @@ mod tokio;
 
 pub use datasize_derive::DataSize;
 
+/// A `const fn` variant of the `min` function.
+pub const fn min(a: usize, b: usize) -> usize {
+    [a, b][(a > b) as usize]
+}
+
 /// Indicates that a type knows how to approximate its memory usage.
 pub trait DataSize {
     /// If `true`, the type has a heap size that can vary at runtime, depending on the actual value.
@@ -341,6 +346,7 @@ where
 
     const STATIC_HEAP_SIZE: usize = 0;
 
+    #[inline]
     fn estimate_heap_size(&self) -> usize {
         match self {
             Some(val) => data_size(val),
@@ -356,10 +362,11 @@ where
 {
     // Results are only not dynamic if their types have no heap data at all and are not dynamic.
     const IS_DYNAMIC: bool =
-        (T::IS_DYNAMIC || E::IS_DYNAMIC || T::STATIC_HEAP_SIZE > 0 || E::STATIC_HEAP_SIZE > 0);
+        (T::IS_DYNAMIC || E::IS_DYNAMIC || (T::STATIC_HEAP_SIZE != E::STATIC_HEAP_SIZE));
 
-    const STATIC_HEAP_SIZE: usize = 0;
+    const STATIC_HEAP_SIZE: usize = min(T::STATIC_HEAP_SIZE, E::STATIC_HEAP_SIZE);
 
+    #[inline]
     fn estimate_heap_size(&self) -> usize {
         match self {
             Ok(val) => data_size(val),
