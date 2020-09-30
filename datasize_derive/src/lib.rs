@@ -377,12 +377,8 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
     //       being dynamic, as well as all having the same `STATIC_HEAP_SIZE`.
     //
     //       `STATIC_HEAP_SIZE` in turn is the minimum of `STATIC_HEAP_SIZE` of every
-    //       variant (which are the sum of their fields). `min` can be determiend by the
-    //       following `const fn`:
-    //
-    //           const fn min(a: usize, b: usize) -> usize {
-    //               [a, b][(a > b) as usize]
-    //           }
+    //       variant (which are the sum of their fields). `min` can be determined by the
+    //       `datasize::min` function, which is a `const fn` variant of `min`.
     let mut is_dynamic = true;
     let static_heap_size = 0usize;
 

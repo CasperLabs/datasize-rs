@@ -184,6 +184,11 @@ mod tokio;
 
 pub use datasize_derive::DataSize;
 
+/// A `const fn` variant of the `min` function.
+pub const fn min(a: usize, b: usize) -> usize {
+    [a, b][(a > b) as usize]
+}
+
 /// Indicates that a type knows how to approximate its memory usage.
 pub trait DataSize {
     /// If `true`, the type has a heap size that can vary at runtime, depending on the actual value.
@@ -341,10 +346,31 @@ where
 
     const STATIC_HEAP_SIZE: usize = 0;
 
+    #[inline]
     fn estimate_heap_size(&self) -> usize {
         match self {
             Some(val) => data_size(val),
             None => 0,
+        }
+    }
+}
+
+impl<T, E> DataSize for Result<T, E>
+where
+    T: DataSize,
+    E: DataSize,
+{
+    // Results are only not dynamic if their types have no heap data at all and are not dynamic.
+    const IS_DYNAMIC: bool =
+        (T::IS_DYNAMIC || E::IS_DYNAMIC || (T::STATIC_HEAP_SIZE != E::STATIC_HEAP_SIZE));
+
+    const STATIC_HEAP_SIZE: usize = min(T::STATIC_HEAP_SIZE, E::STATIC_HEAP_SIZE);
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        match self {
+            Ok(val) => data_size(val),
+            Err(err) => data_size(err),
         }
     }
 }
@@ -389,6 +415,36 @@ mod tests {
         assert!(!Foo::IS_DYNAMIC);
         assert_eq!(Foo::STATIC_HEAP_SIZE, 0);
         assert_eq!(data_size(&Foo(123, 45)), 0);
+    }
+
+    #[test]
+    fn test_result() {
+        assert_eq!(Result::<u8, u8>::STATIC_HEAP_SIZE, 0);
+        assert!(!Result::<u8, u8>::IS_DYNAMIC);
+
+        assert_eq!(Result::<u8, u16>::STATIC_HEAP_SIZE, 0);
+        assert!(!Result::<u8, u16>::IS_DYNAMIC);
+
+        assert_eq!(Result::<u8, Box<u16>>::STATIC_HEAP_SIZE, 0);
+        assert!(Result::<u8, Box<u16>>::IS_DYNAMIC);
+
+        assert_eq!(Result::<Box<u8>, u16>::STATIC_HEAP_SIZE, 0);
+        assert!(Result::<Box<u8>, u16>::IS_DYNAMIC);
+
+        assert_eq!(Result::<Box<u8>, Box<u16>>::STATIC_HEAP_SIZE, 1);
+        assert!(Result::<Box<u8>, Box<u16>>::IS_DYNAMIC);
+
+        assert_eq!(Result::<Box<u16>, Box<u16>>::STATIC_HEAP_SIZE, 2);
+        assert!(!Result::<Box<u16>, Box<u16>>::IS_DYNAMIC);
+
+        assert_eq!(Result::<u16, Vec<u16>>::STATIC_HEAP_SIZE, 0);
+        assert!(Result::<u16, Vec<u16>>::IS_DYNAMIC);
+
+        assert_eq!(Result::<Vec<u16>, u16>::STATIC_HEAP_SIZE, 0);
+        assert!(Result::<Vec<u16>, u16>::IS_DYNAMIC);
+
+        assert_eq!(Result::<Vec<u16>, Vec<u16>>::STATIC_HEAP_SIZE, 0);
+        assert!(Result::<Vec<u16>, Vec<u16>>::IS_DYNAMIC);
     }
 
     #[test]
