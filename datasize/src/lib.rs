@@ -349,6 +349,25 @@ where
     }
 }
 
+impl<T, E> DataSize for Result<T, E>
+where
+    T: DataSize,
+    E: DataSize,
+{
+    // Results are only not dynamic if their types have no heap data at all and are not dynamic.
+    const IS_DYNAMIC: bool =
+        (T::IS_DYNAMIC || E::IS_DYNAMIC || T::STATIC_HEAP_SIZE > 0 || E::STATIC_HEAP_SIZE > 0);
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    fn estimate_heap_size(&self) -> usize {
+        match self {
+            Ok(val) => data_size(val),
+            Err(err) => data_size(err),
+        }
+    }
+}
+
 impl<T> DataSize for core::marker::PhantomData<T> {
     const IS_DYNAMIC: bool = false;
     const STATIC_HEAP_SIZE: usize = 0;
