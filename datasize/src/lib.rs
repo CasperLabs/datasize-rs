@@ -418,6 +418,36 @@ mod tests {
     }
 
     #[test]
+    fn test_result() {
+        assert_eq!(Result::<u8, u8>::STATIC_HEAP_SIZE, 0);
+        assert!(!Result::<u8, u8>::IS_DYNAMIC);
+
+        assert_eq!(Result::<u8, u16>::STATIC_HEAP_SIZE, 0);
+        assert!(!Result::<u8, u16>::IS_DYNAMIC);
+
+        assert_eq!(Result::<u8, Box<u16>>::STATIC_HEAP_SIZE, 0);
+        assert!(Result::<u8, Box<u16>>::IS_DYNAMIC);
+
+        assert_eq!(Result::<Box<u8>, u16>::STATIC_HEAP_SIZE, 0);
+        assert!(Result::<Box<u8>, u16>::IS_DYNAMIC);
+
+        assert_eq!(Result::<Box<u8>, Box<u16>>::STATIC_HEAP_SIZE, 1);
+        assert!(Result::<Box<u8>, Box<u16>>::IS_DYNAMIC);
+
+        assert_eq!(Result::<Box<u16>, Box<u16>>::STATIC_HEAP_SIZE, 2);
+        assert!(!Result::<Box<u16>, Box<u16>>::IS_DYNAMIC);
+
+        assert_eq!(Result::<u16, Vec<u16>>::STATIC_HEAP_SIZE, 0);
+        assert!(Result::<u16, Vec<u16>>::IS_DYNAMIC);
+
+        assert_eq!(Result::<Vec<u16>, u16>::STATIC_HEAP_SIZE, 0);
+        assert!(Result::<Vec<u16>, u16>::IS_DYNAMIC);
+
+        assert_eq!(Result::<Vec<u16>, Vec<u16>>::STATIC_HEAP_SIZE, 0);
+        assert!(Result::<Vec<u16>, Vec<u16>>::IS_DYNAMIC);
+    }
+
+    #[test]
     fn test_empty_struct() {
         #[derive(DataSize)]
         struct Foo {}
