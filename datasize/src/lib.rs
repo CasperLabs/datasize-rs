@@ -418,6 +418,16 @@ mod tests {
     }
 
     #[test]
+    fn test_tuple_with_one_element() {
+        type Foo = (u32,);
+        assert!(!Foo::IS_DYNAMIC);
+        assert_eq!(Foo::STATIC_HEAP_SIZE, 0);
+
+        let foo: Foo = (456,);
+        assert_eq!(data_size(&foo), 0);
+    }
+
+    #[test]
     fn test_result() {
         assert_eq!(Result::<u8, u8>::STATIC_HEAP_SIZE, 0);
         assert!(!Result::<u8, u8>::IS_DYNAMIC);
