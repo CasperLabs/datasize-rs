@@ -309,6 +309,19 @@ tuple_heap_size!(0 T0; 1 T1; 2 T2; 3 T3; 4 T4; 5 T5; 6 T6; 7 T7; 8 T8; 9 T9; 10 
 tuple_heap_size!(0 T0; 1 T1; 2 T2; 3 T3; 4 T4; 5 T5; 6 T6; 7 T7; 8 T8; 9 T9; 10 T10; 11 T11; 12 T12; 13 T13; 14 T14);
 tuple_heap_size!(0 T0; 1 T1; 2 T2; 3 T3; 4 T4; 5 T5; 6 T6; 7 T7; 8 T8; 9 T9; 10 T10; 11 T11; 12 T12; 13 T13; 14 T14; 15 T15);
 
+impl<T0> DataSize for (T0,)
+where
+    T0: DataSize,
+{
+    const IS_DYNAMIC: bool = T0::IS_DYNAMIC;
+    const STATIC_HEAP_SIZE: usize = T0::STATIC_HEAP_SIZE;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        self.0.estimate_heap_size()
+    }
+}
+
 array_heap_size!(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 128 192 256 384 512 1024 2048 4096 8192 16384 1048576 2097152 3145728 4194304);
 
 // REFERENCES
@@ -415,6 +428,16 @@ mod tests {
         assert!(!Foo::IS_DYNAMIC);
         assert_eq!(Foo::STATIC_HEAP_SIZE, 0);
         assert_eq!(data_size(&Foo(123, 45)), 0);
+    }
+
+    #[test]
+    fn test_tuple_with_one_element() {
+        type Foo = (u32,);
+        assert!(!Foo::IS_DYNAMIC);
+        assert_eq!(Foo::STATIC_HEAP_SIZE, 0);
+
+        let foo: Foo = (456,);
+        assert_eq!(data_size(&foo), 0);
     }
 
     #[test]
