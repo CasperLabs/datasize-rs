@@ -228,6 +228,13 @@ mod tests {
     }
 
     #[test]
+    fn test_string() {
+        let value = "abcdef".to_string();
+
+        assert_eq!(data_size(&value), 6);
+    }
+
+    #[test]
     fn test_struct() {
         #[derive(DataSize)]
         struct Example {
