@@ -2,7 +2,7 @@ use super::{data_size, non_dynamic_const_heap_size, DataSize};
 
 use core::mem::size_of;
 
-use std::{boxed::Box, string::String, vec::Vec};
+use std::{borrow::Cow, boxed::Box, string::String, vec::Vec};
 
 non_dynamic_const_heap_size!(
   std::net::Ipv4Addr
@@ -29,6 +29,22 @@ where
     fn estimate_heap_size(&self) -> usize {
         // Total size is the struct itself + its children.
         size_of::<T>() + data_size::<T>(self)
+    }
+}
+
+impl<'a, T> DataSize for Cow<'a, T>
+where
+    T: 'a + ToOwned + ?Sized,
+    <T as ToOwned>::Owned: DataSize,
+{
+    const IS_DYNAMIC: bool = true;
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    fn estimate_heap_size(&self) -> usize {
+        match self {
+            Cow::Borrowed(_) => 0,
+            Cow::Owned(inner) => inner.estimate_heap_size(),
+        }
     }
 }
 
@@ -209,6 +225,7 @@ where
 mod tests {
     use crate as datasize; // Required for the derive macro.
     use crate::{data_size, DataSize};
+    use std::borrow::Cow;
 
     #[test]
     fn test_box() {
@@ -225,6 +242,16 @@ mod tests {
 
         assert_eq!(data_size::<Option<Box<u64>>>(&value_none), 0);
         assert_eq!(data_size::<Option<Box<u64>>>(&value_some), 8);
+    }
+
+    #[test]
+    fn test_cow() {
+        let value: Cow<'static, str> = Cow::from("hello");
+        assert_eq!(data_size(&value), 0);
+
+        let value_owned: Cow<'static, str> = Cow::from("hello".to_owned());
+
+        assert_eq!(data_size(&value_owned), data_size(&"hello".to_owned()));
     }
 
     #[test]
