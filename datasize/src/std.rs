@@ -173,6 +173,26 @@ where
     }
 }
 
+impl<T> DataSize for std::collections::BTreeSet<T>
+where
+    T: DataSize,
+{
+    // A BTreeSet<T> is implemented as BTreeMap<T, ()> in the standard library, so we use the same
+    // estimate as above.
+
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    fn estimate_heap_size(&self) -> usize {
+        if T::IS_DYNAMIC {
+            self.len() * size_of::<T>() + self.iter().map(T::estimate_heap_size).sum::<usize>()
+        } else {
+            self.len() * (size_of::<T>() + T::STATIC_HEAP_SIZE)
+        }
+    }
+}
+
 impl<K, V, S> DataSize for std::collections::HashMap<K, V, S>
 where
     K: DataSize,
