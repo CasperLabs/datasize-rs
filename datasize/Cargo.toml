@@ -10,6 +10,7 @@ repository = "https://github.com/casperlabs/datasize-rs"
 
 [features]
 default = ["std"]
+detailed = ["std", "serde"]
 fake_clock-types = ["fake_instant"]
 futures-types = ["futures"]
 smallvec-types = ["smallvec", "std"]
@@ -20,5 +21,6 @@ tokio-types = ["tokio"]
 datasize_derive = { version = "0.2.4" }
 fake_instant = { version = "0.4.0", optional = true }
 futures = { version = "0.3.5", optional = true }
-tokio = { version = "0.2.22", default-features = false, optional = true, features = ["rt-core", "sync"] }
+serde = { version = "1", optional = true, features = ["derive"] }
 smallvec = { version = "1.4.2", optional = true }
+tokio = { version = "0.2.22", default-features = false, optional = true, features = ["rt-core", "sync"] }

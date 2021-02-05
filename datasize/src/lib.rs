@@ -202,6 +202,26 @@ pub trait DataSize {
     ///
     /// Does not include data on the stack, which is usually determined using `mem::size_of`.
     fn estimate_heap_size(&self) -> usize;
+
+    #[cfg(feature = "detailed")]
+    /// Create a tree of memory estimations.
+    ///
+    /// Similar to `estimate_heap_size`, but the returned value is a tree that typically reports
+    /// memory used by structs individually.
+    ///
+    /// Requires the `detailed` feature to be enabled.
+    #[inline]
+    fn estimate_detailed_heap_size(&self) -> MemUsageNode {
+        MemUsageNode::Size(self.estimate_heap_size())
+    }
+}
+
+#[cfg(feature = "detailed")]
+/// A node in a memory reporting tree.
+#[derive(Debug, serde::Serialize)]
+pub enum MemUsageNode {
+    Size(usize),
+    Detailed(::std::collections::HashMap<&'static str, MemUsageNode>),
 }
 
 /// Estimates allocated heap data from data of value.
