@@ -388,6 +388,53 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "detailed")]
+    fn test_nested_detailed_struct() {
+        #[derive(DataSize)]
+        struct Inner {
+            value: Box<u64>,
+            dummy: u8,
+        }
+
+        #[derive(DataSize)]
+        struct Outer {
+            a: Box<Inner>,
+            b: Inner,
+            c: u8,
+        }
+
+        let fixture = Outer {
+            a: Box::new(Inner {
+                value: Box::new(1),
+                dummy: 42,
+            }),
+            b: Inner {
+                value: Box::new(2),
+                dummy: 42,
+            },
+            c: 3,
+        };
+
+        let detailed = datasize::data_size_detailed(&fixture);
+
+        use datasize::MemUsageNode;
+        use std::collections::HashMap;
+
+        let mut inner_map = HashMap::new();
+        inner_map.insert("value", MemUsageNode::Size(8));
+        inner_map.insert("dummy", MemUsageNode::Size(0));
+
+        let mut outer_map = HashMap::new();
+        outer_map.insert("a", MemUsageNode::Size(24));
+        outer_map.insert("b", MemUsageNode::Detailed(inner_map));
+        outer_map.insert("c", MemUsageNode::Size(0));
+
+        let expected = MemUsageNode::Detailed(outer_map);
+
+        assert_eq!(detailed, expected);
+    }
+
+    #[test]
     fn test_generic_enum() {
         #[derive(DataSize)]
         enum Foo<A, B, C, D> {
