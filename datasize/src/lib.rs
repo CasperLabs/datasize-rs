@@ -254,6 +254,19 @@ where
     }
 }
 
+#[cfg(feature = "detailed")]
+/// Estimates allocated heap data from data of value.
+///
+/// Checks if `T` is dynamic; if it is not, returns `T::STATIC_HEAP_SIZE`. Otherwise delegates to
+/// `T::estimate_heap_size`.
+#[inline]
+pub fn data_size_detailed<T>(value: &T) -> MemUsageNode
+where
+    T: DataSize,
+{
+    value.estimate_detailed_heap_size()
+}
+
 /// Helper macro to define a heap size for one or more non-dynamic types.
 #[macro_export]
 macro_rules! non_dynamic_const_heap_size {
