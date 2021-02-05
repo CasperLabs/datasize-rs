@@ -10,7 +10,7 @@ repository = "https://github.com/casperlabs/datasize-rs"
 
 [features]
 default = ["std"]
-detailed = ["std", "serde"]
+detailed = ["std", "serde", "datasize_derive/detailed"]
 fake_clock-types = ["fake_instant"]
 futures-types = ["futures"]
 smallvec-types = ["smallvec", "std"]

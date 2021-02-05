@@ -261,6 +261,16 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
         where_clauses.extend(quote!(#predicates));
     }
 
+    let detailed_impl = if cfg!(feature = "detailed") {
+        quote!(
+            fn estimate_detailed_heap_size(&self) -> datasize::MemUsageNode {
+                datasize::MemUsageNode::Size(self.estimate_heap_size())
+            }
+        )
+    } else {
+        quote!()
+    };
+
     TokenStream::from(quote! {
         impl #generics datasize::DataSize for #name #generics #where_clauses {
             const IS_DYNAMIC: bool = #is_dynamic;
@@ -269,6 +279,8 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
             fn estimate_heap_size(&self) -> usize {
                 #dynamic_size
             }
+
+            #detailed_impl
         }
     })
 }
