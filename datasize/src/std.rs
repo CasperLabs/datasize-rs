@@ -40,6 +40,7 @@ where
     const IS_DYNAMIC: bool = true;
     const STATIC_HEAP_SIZE: usize = 0;
 
+    #[inline]
     fn estimate_heap_size(&self) -> usize {
         match self {
             Cow::Borrowed(_) => 0,
@@ -132,6 +133,7 @@ impl DataSize for std::path::PathBuf {
 
     const STATIC_HEAP_SIZE: usize = 0;
 
+    #[inline]
     fn estimate_heap_size(&self) -> usize {
         self.capacity()
     }
@@ -142,6 +144,7 @@ impl DataSize for std::ffi::OsString {
 
     const STATIC_HEAP_SIZE: usize = 0;
 
+    #[inline]
     fn estimate_heap_size(&self) -> usize {
         self.capacity()
     }
@@ -159,6 +162,7 @@ where
 
     const STATIC_HEAP_SIZE: usize = 0;
 
+    #[inline]
     fn estimate_heap_size(&self) -> usize {
         let mut size = 0;
 
@@ -184,6 +188,7 @@ where
 
     const STATIC_HEAP_SIZE: usize = 0;
 
+    #[inline]
     fn estimate_heap_size(&self) -> usize {
         if T::IS_DYNAMIC {
             self.len() * size_of::<T>() + self.iter().map(T::estimate_heap_size).sum::<usize>()
