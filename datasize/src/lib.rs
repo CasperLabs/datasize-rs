@@ -224,6 +224,18 @@ pub enum MemUsageNode {
     Detailed(::std::collections::HashMap<&'static str, MemUsageNode>),
 }
 
+#[cfg(feature = "detailed")]
+impl MemUsageNode {
+    /// Calculate the total memory usage given by detailed estimate
+    #[inline]
+    pub fn total(&self) -> usize {
+        match self {
+            MemUsageNode::Size(sz) => *sz,
+            MemUsageNode::Detailed(members) => members.values().map(MemUsageNode::total).sum(),
+        }
+    }
+}
+
 /// Estimates allocated heap data from data of value.
 ///
 /// Checks if `T` is dynamic; if it is not, returns `T::STATIC_HEAP_SIZE`. Otherwise delegates to
