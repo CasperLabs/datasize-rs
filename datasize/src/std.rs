@@ -388,6 +388,28 @@ mod tests {
     }
 
     #[test]
+    fn test_data_size_inner_box() {
+        #[derive(Clone, DataSize)]
+        struct Inner {
+            value: Box<u64>, // sz: ptr, heap: 8
+            dummy: u8,       // sz: ptr
+        }
+        // total: sz 16, heap 8
+
+        let inner = Inner {
+            value: Box::new(0), // sz ptr, heap: 2*ptr+8
+            dummy: 0,           // sz ptr
+        };
+        // total: 24
+
+        let boxed = Box::new(inner.clone());
+
+        let inner_size = core::mem::size_of::<Inner>();
+        assert_eq!(8, data_size(&inner));
+        assert_eq!(8 + inner_size, data_size(&boxed));
+    }
+
+    #[test]
     #[cfg(feature = "detailed")]
     fn test_nested_detailed_struct() {
         #[derive(DataSize)]
