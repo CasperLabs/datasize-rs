@@ -432,6 +432,8 @@ mod tests {
         let expected = MemUsageNode::Detailed(outer_map);
 
         assert_eq!(detailed, expected);
+
+        assert_eq!(data_size(&fixture), detailed.total());
     }
 
     #[test]
