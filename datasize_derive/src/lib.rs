@@ -194,6 +194,7 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
     let mut is_dynamic = proc_macro2::TokenStream::new();
     let mut static_heap_size = proc_macro2::TokenStream::new();
     let mut dynamic_size = proc_macro2::TokenStream::new();
+    let mut detail_calls = proc_macro2::TokenStream::new();
 
     for (idx, field) in fields
         .iter()
@@ -239,8 +240,18 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
             quote!(#idx)
         };
 
+        let name = if let Some(ref ident) = &field.ident {
+            ident.to_string()
+        } else {
+            "idx".to_string()
+        };
+
         dynamic_size.extend(quote!(
             datasize::data_size::<#ty>(&self.#handle)
+        ));
+
+        detail_calls.extend(quote!(
+            members.insert(#name, self.#handle.estimate_detailed_heap_size());
         ));
     }
 
@@ -264,7 +275,9 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
     let detailed_impl = if cfg!(feature = "detailed") {
         quote!(
             fn estimate_detailed_heap_size(&self) -> datasize::MemUsageNode {
-                datasize::MemUsageNode::Size(self.estimate_heap_size())
+                let mut members = ::std::collections::HashMap::new();
+                #detail_calls
+                datasize::MemUsageNode::Detailed(members)
             }
         )
     } else {

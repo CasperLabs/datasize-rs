@@ -218,7 +218,7 @@ pub trait DataSize {
 
 #[cfg(feature = "detailed")]
 /// A node in a memory reporting tree.
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, PartialEq)]
 pub enum MemUsageNode {
     Size(usize),
     Detailed(::std::collections::HashMap<&'static str, MemUsageNode>),
