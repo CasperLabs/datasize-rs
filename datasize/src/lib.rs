@@ -245,20 +245,11 @@ pub fn data_size<T>(value: &T) -> usize
 where
     T: DataSize,
 {
-    if T::IS_DYNAMIC {
-        // The type changes at runtime, so we always have to query the instance.
-        value.estimate_heap_size()
-    } else {
-        // Type does not change at runtime, so it will only occupy the `STATIC_HEAP_SIZE`.
-        T::STATIC_HEAP_SIZE
-    }
+    value.estimate_heap_size()
 }
 
 #[cfg(feature = "detailed")]
 /// Estimates allocated heap data from data of value.
-///
-/// Checks if `T` is dynamic; if it is not, returns `T::STATIC_HEAP_SIZE`. Otherwise delegates to
-/// `T::estimate_heap_size`.
 #[inline]
 pub fn data_size_detailed<T>(value: &T) -> MemUsageNode
 where
