@@ -53,6 +53,35 @@
 //! assert!(!Box::<u64>::IS_DYNAMIC);
 //! ```
 //!
+//! # Overriding derived data size calculation for single fields.
+//!
+//! On structs (but not enums!) the calculation for heap size can be overriden for single fields,
+//! which is useful when dealing with third-party crates whose fields do not implement `DataSize` by
+//! simply annotating it with `#[data_size(with = ...)]` and pointing to a `Fn(T) -> usize`
+//! function:
+//!
+//! ```rust
+//! use datasize::DataSize;
+//!
+//! // Let's pretend this type is from a foreign crate.
+//! struct ThirdPartyType;
+//!
+//! fn estimate_third_party_type(value: &Vec<ThirdPartyType>) -> usize {
+//!     // We assume every item is 512 bytes in heap size.
+//!     value.len() * 512
+//! }
+//!
+//! #[derive(DataSize)]
+//! struct MyStruct {
+//!     items: Vec<u32>,
+//!     #[data_size(with = estimate_third_party_type)]
+//!     other_stuff: Vec<ThirdPartyType>,
+//! }
+//! ```
+//!
+//! This automatically marks the whole struct as always dynamic, so the custom estimation function
+//! is called every time `MyStruct` is sized.
+//!
 //! # Implementing `DataSize` for custom types
 //!
 //! The `DataSize` trait can be implemented for custom types manually:
