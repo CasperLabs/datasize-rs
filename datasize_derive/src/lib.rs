@@ -13,7 +13,7 @@ use syn::{
 
 /// Automatically derive the `DataSize` trait for a type.
 ///
-/// Supports a single option, `#[datasize(skip)]`. If set on a field, it will be ignored entirely
+/// Supports a single option, `#[data_size(skip)]`. If set on a field, it will be ignored entirely
 /// when deriving the implementation.
 #[proc_macro_derive(DataSize, attributes(data_size))]
 pub fn derive_data_size(input: TokenStream) -> TokenStream {
@@ -160,30 +160,51 @@ fn param_bound_contains_generic(generics: &Generics, bound: &TypeParamBound) -> 
     }
 }
 
-/// Determines if attributes contain `#[data_size(skip)]`.
-fn should_skip(attrs: &Vec<Attribute>) -> bool {
-    for attr in attrs {
-        if attr.style != AttrStyle::Outer {
-            // We ignore out attributes.
-            continue;
+/// A set of attributes on top of a field in a struct.
+#[derive(Debug)]
+struct DataSizeAttributes {
+    /// Whether or not to skip the field entirely (`data_size(skip)`).
+    pub skip: bool,
+}
+
+impl DataSizeAttributes {
+    /// Parses a set of attributes from untyped [`Attribute`]s.
+    fn parse(attrs: &Vec<Attribute>) -> Self {
+        let mut skip = None;
+
+        for attr in attrs {
+            if attr.style != AttrStyle::Outer {
+                // We ignore outer attributes.
+                continue;
+            }
+
+            // Ensure it is a `data_size` attribute.
+            if attr.path.segments.len() != 1
+                || attr.path.segments[0].ident.to_string() != "data_size"
+            {
+                continue;
+            }
+
+            let parsed: Ident = attr
+                .parse_args()
+                .expect("could not parse datasize attribute");
+
+            match parsed.to_string().as_str() {
+                "skip" => {
+                    if skip.is_some() {
+                        panic!("duplicated `skip` attribute");
+                    } else {
+                        skip = Some(true);
+                    }
+                }
+                s => panic!(format!("unexpected datasize attribute {}", s)),
+            }
         }
 
-        // Ensure it is a `data_size` attribute.
-        if attr.path.segments.len() != 1 || attr.path.segments[0].ident.to_string() != "data_size" {
-            continue;
-        }
-
-        let parsed: Ident = attr
-            .parse_args()
-            .expect("could not parse datasize attribute");
-
-        match parsed.to_string().as_str() {
-            "skip" => return true,
-            s => panic!(format!("unexpected datasize attribute {}", s)),
+        DataSizeAttributes {
+            skip: skip.unwrap_or(false),
         }
     }
-
-    false
 }
 
 /// Derives `DataSize` for a `struct`
@@ -199,7 +220,7 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
     for (idx, field) in fields
         .iter()
         .enumerate()
-        .filter(|(_, f)| !should_skip(&f.attrs))
+        .filter(|(_, f)| !DataSizeAttributes::parse(&f.attrs).skip)
     {
         let ty = &field.ty;
         // We need a where clause for every non-skipped field. We try our best to filter out bounds
@@ -305,7 +326,9 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
 
     let mut skipped = false;
     for variant in de.variants.into_iter() {
-        if should_skip(&variant.attrs) {
+        let ds_attrs = DataSizeAttributes::parse(&variant.attrs);
+
+        if ds_attrs.skip {
             skipped = true;
             continue;
         }
@@ -321,9 +344,9 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
 
                 for field in fields.named.into_iter() {
                     let ident = field.ident.expect("named fields must have idents");
-                    let skip = should_skip(&field.attrs);
+                    let ds_attrs = DataSizeAttributes::parse(&field.attrs);
 
-                    if skip {
+                    if ds_attrs.skip {
                         left.extend(quote!(#ident:_));
                     } else {
                         left.extend(quote!(#ident ,));
@@ -334,7 +357,7 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
                         }
                     }
 
-                    if !skip {
+                    if !ds_attrs.skip {
                         if !field_calc.is_empty() {
                             field_calc.extend(quote!(+));
                         }
@@ -350,15 +373,16 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
                 let mut left = proc_macro2::TokenStream::new();
 
                 for (idx, field) in fields.unnamed.into_iter().enumerate() {
-                    let skip = should_skip(&field.attrs);
+                    let field_ds_attrs = DataSizeAttributes::parse(&field.attrs);
+
                     let ident = Ident::new(
-                        &format!("{}f{}", if skip { "_" } else { "" }, idx),
+                        &format!("{}f{}", if field_ds_attrs.skip { "_" } else { "" }, idx),
                         proc_macro2::Span::call_site(),
                     );
 
                     left.extend(quote!(#ident ,));
 
-                    if !skip {
+                    if !field_ds_attrs.skip {
                         if !field_calc.is_empty() {
                             field_calc.extend(quote!(+));
                         }
