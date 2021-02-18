@@ -581,4 +581,27 @@ mod tests {
             Value(T),
         }
     }
+
+    #[test]
+    fn use_with_annotation() {
+        fn ds_for_field_b(value: &u32) -> usize {
+            assert_eq!(*value, 2); // set in the example
+            1234
+        }
+
+        #[derive(DataSize)]
+        struct Foo {
+            field_a: u32,
+            #[data_size(with = ds_for_field_b)]
+            field_b: u32,
+            field_c: u32,
+        }
+
+        let value = Foo {
+            field_a: 1,
+            field_b: 2,
+            field_c: 3,
+        };
+        assert_eq!(value.estimate_heap_size(), 1234);
+    }
 }

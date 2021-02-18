@@ -4,8 +4,8 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::collections::HashSet;
 use syn::{
-    parse_macro_input, AngleBracketedGenericArguments, AttrStyle, Attribute, Binding, DataEnum,
-    DataStruct, DeriveInput, Generics, Ident, Index, ParenthesizedGenericArguments, Path,
+    parse, parse_macro_input, AngleBracketedGenericArguments, AttrStyle, Attribute, Binding,
+    DataEnum, DataStruct, DeriveInput, Generics, Ident, Index, ParenthesizedGenericArguments, Path,
     PathArguments, ReturnType, TraitBound, Type, TypeArray, TypeBareFn, TypeGroup, TypeImplTrait,
     TypeParam, TypeParamBound, TypeParen, TypePath, TypePtr, TypeReference, TypeSlice,
     TypeTraitObject, TypeTuple, WhereClause,
@@ -160,17 +160,52 @@ fn param_bound_contains_generic(generics: &Generics, bound: &TypeParamBound) -> 
     }
 }
 
+#[derive(Debug)]
+/// A single attribute on top of a datasize'd field.
+enum DataAttribute {
+    /// The `data_size(skip)` attribute.
+    Skip,
+    /// The `data_size(with = "...")` attribute.
+    With(syn::Path),
+}
+
+impl parse::Parse for DataAttribute {
+    fn parse(input: parse::ParseStream) -> syn::Result<Self> {
+        let ident = input.parse::<Ident>().expect("IDENT??").to_string();
+
+        match ident.as_str() {
+            "skip" => Ok(DataAttribute::Skip),
+            "with" => {
+                let punct: proc_macro2::Punct = input.parse().expect("PUNCT??");
+                if punct.as_char() != '=' {
+                    return Err(syn::parse::Error::new(
+                        input.span(),
+                        "expected `=` after `with`",
+                    ));
+                }
+
+                let path: syn::Path = input.parse()?;
+                Ok(DataAttribute::With(path))
+            }
+            kw => panic!("unsupported attribute keyword: {}", kw),
+        }
+    }
+}
+
 /// A set of attributes on top of a field in a struct.
 #[derive(Debug)]
 struct DataSizeAttributes {
     /// Whether or not to skip the field entirely (`data_size(skip)`).
     pub skip: bool,
+    /// A function to call instead of deriving the data size.
+    pub with: Option<syn::Path>,
 }
 
 impl DataSizeAttributes {
     /// Parses a set of attributes from untyped [`Attribute`]s.
     fn parse(attrs: &Vec<Attribute>) -> Self {
         let mut skip = None;
+        let mut with = None;
 
         for attr in attrs {
             if attr.style != AttrStyle::Outer {
@@ -185,24 +220,31 @@ impl DataSizeAttributes {
                 continue;
             }
 
-            let parsed: Ident = attr
+            let parsed: DataAttribute = attr
                 .parse_args()
                 .expect("could not parse datasize attribute");
 
-            match parsed.to_string().as_str() {
-                "skip" => {
+            match parsed {
+                DataAttribute::Skip => {
                     if skip.is_some() {
                         panic!("duplicated `skip` attribute");
                     } else {
                         skip = Some(true);
                     }
                 }
-                s => panic!(format!("unexpected datasize attribute {}", s)),
+                DataAttribute::With(fragment) => {
+                    if with.is_some() {
+                        panic!("duplicated `with` attribute");
+                    } else {
+                        with = Some(fragment)
+                    }
+                }
             }
         }
 
         DataSizeAttributes {
             skip: skip.unwrap_or(false),
+            with,
         }
     }
 }
@@ -217,16 +259,23 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
     let mut dynamic_size = proc_macro2::TokenStream::new();
     let mut detail_calls = proc_macro2::TokenStream::new();
 
-    for (idx, field) in fields
-        .iter()
-        .enumerate()
-        .filter(|(_, f)| !DataSizeAttributes::parse(&f.attrs).skip)
-    {
+    let mut has_manual_field = false;
+
+    for (idx, field) in fields.iter().enumerate() {
+        let field_attrs = DataSizeAttributes::parse(&field.attrs);
+        if field_attrs.skip {
+            continue;
+        }
+
+        if field_attrs.with.is_some() {
+            has_manual_field = true;
+        }
+
         let ty = &field.ty;
-        // We need a where clause for every non-skipped field. We try our best to filter out bounds
-        // here that are not needed (e.g. `u8: DataSize`), as they can be problematic when mixing
-        // `pub(super)` and `pub` visiblity restrictions.
-        if contains_generic(&generics, ty) {
+        // We need a where clause for every non-skipped, non-with field. We try our best to filter
+        // out bounds here that are not needed (e.g. `u8: DataSize`), as they can be problematic
+        // when mixing `pub(super)` and `pub` visiblity restrictions.
+        if field_attrs.with.is_none() && contains_generic(&generics, ty) {
             if where_clauses.is_empty() {
                 where_clauses.extend(quote!(where));
             }
@@ -251,8 +300,12 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
         is_dynamic.extend(quote!(<#ty as datasize::DataSize>));
         is_dynamic.extend(quote!(::IS_DYNAMIC));
 
-        static_heap_size.extend(quote!(<#ty as datasize::DataSize>));
-        static_heap_size.extend(quote!(::STATIC_HEAP_SIZE));
+        if field_attrs.with.is_none() {
+            static_heap_size.extend(quote!(<#ty as datasize::DataSize>));
+            static_heap_size.extend(quote!(::STATIC_HEAP_SIZE));
+        } else {
+            static_heap_size.extend(quote!(0));
+        };
 
         let handle = if let Some(ref ident) = &field.ident {
             quote!(#ident)
@@ -267,13 +320,26 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
             "idx".to_string()
         };
 
-        dynamic_size.extend(quote!(
-            datasize::data_size::<#ty>(&self.#handle)
-        ));
+        match field_attrs.with {
+            Some(manual) => {
+                dynamic_size.extend(quote!(
+                    #manual(&self.#handle)
+                ));
 
-        detail_calls.extend(quote!(
-            members.insert(#name, self.#handle.estimate_detailed_heap_size());
-        ));
+                detail_calls.extend(quote!(
+                    members.insert(#name, #manual(&self.#handle));
+                ));
+            }
+            None => {
+                dynamic_size.extend(quote!(
+                    datasize::data_size::<#ty>(&self.#handle)
+                ));
+
+                detail_calls.extend(quote!(
+                    members.insert(#name, self.#handle.estimate_detailed_heap_size());
+                ));
+            }
+        }
     }
 
     // Handle structs with no fields.
@@ -304,6 +370,12 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
     } else {
         quote!()
     };
+
+    // If we found at least one manual field, ensure we recalculate heap size always.
+    if has_manual_field {
+        is_dynamic = proc_macro2::TokenStream::new();
+        is_dynamic.extend(quote!(true));
+    }
 
     TokenStream::from(quote! {
         impl #generics datasize::DataSize for #name #generics #where_clauses {
