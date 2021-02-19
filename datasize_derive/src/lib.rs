@@ -327,7 +327,7 @@ fn derive_for_struct(name: Ident, generics: Generics, ds: DataStruct) -> TokenSt
                 ));
 
                 detail_calls.extend(quote!(
-                    members.insert(#name, #manual(&self.#handle));
+                    members.insert(#name, datasize::MemUsageNode::Size(#manual(&self.#handle)));
                 ));
             }
             None => {
