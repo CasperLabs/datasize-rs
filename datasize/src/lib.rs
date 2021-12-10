@@ -353,7 +353,7 @@ macro_rules! array_heap_size {
 }
 
 // Primitives
-non_dynamic_const_heap_size!(() u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize bool char, 0);
+non_dynamic_const_heap_size!(() u8 u16 u32 u64 u128 usize i8 i16 i32 i64 i128 isize bool char f32 f64, 0);
 
 // Assorted heapless `core` types
 non_dynamic_const_heap_size!(core::time::Duration, 0);
