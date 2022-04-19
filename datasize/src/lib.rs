@@ -270,7 +270,7 @@ impl MemUsageNode {
 /// Checks if `T` is dynamic; if it is not, returns `T::STATIC_HEAP_SIZE`. Otherwise delegates to
 /// `T::estimate_heap_size`.
 #[inline]
-pub fn data_size<T>(value: &T) -> usize
+pub fn data_size<T: ?Sized>(value: &T) -> usize
 where
     T: DataSize,
 {
@@ -280,7 +280,7 @@ where
 #[cfg(feature = "detailed")]
 /// Estimates allocated heap data from data of value.
 #[inline]
-pub fn data_size_detailed<T>(value: &T) -> MemUsageNode
+pub fn data_size_detailed<T: ?Sized>(value: &T) -> MemUsageNode
 where
     T: DataSize,
 {
@@ -460,6 +460,16 @@ impl<T> DataSize for core::marker::PhantomData<T> {
     #[inline]
     fn estimate_heap_size(&self) -> usize {
         0
+    }
+}
+
+impl<T: DataSize> DataSize for core::ops::Range<T> {
+    const IS_DYNAMIC: bool = T::IS_DYNAMIC;
+    const STATIC_HEAP_SIZE: usize = 2 * T::STATIC_HEAP_SIZE;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        self.start.estimate_heap_size() + self.end.estimate_heap_size()
     }
 }
 
