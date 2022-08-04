@@ -218,7 +218,7 @@ where
                 n + key.estimate_heap_size() + value.estimate_heap_size()
             })
         } else {
-            size + self.capacity() * (K::STATIC_HEAP_SIZE + V::STATIC_HEAP_SIZE)
+            size + self.len() * (K::STATIC_HEAP_SIZE + V::STATIC_HEAP_SIZE)
         }
     }
 }
@@ -241,7 +241,7 @@ where
             self.iter()
                 .fold(size, |n, value| n + value.estimate_heap_size())
         } else {
-            size + self.capacity() * T::STATIC_HEAP_SIZE
+            size + self.len() * T::STATIC_HEAP_SIZE
         }
     }
 }
@@ -508,5 +508,95 @@ mod tests {
             data_size(&Foo(Box::new(123u32), Box::new(45), Box::new(0))),
             5
         );
+    }
+
+    #[test]
+    fn test_hashmap_dynamic() {
+        let mut map = std::collections::HashMap::new();
+        map.insert("xx".to_string(), "yy".to_string());
+        map.insert("aaa".to_string(), "aaa".to_string());
+
+        let expected_size = map.capacity()
+            * (2 * core::mem::size_of::<String>() + core::mem::size_of::<usize>())
+            + (2 + 2 + 3 + 3);
+        assert_eq!(expected_size, map.estimate_heap_size());
+
+        let mut map_2 = std::collections::HashMap::with_capacity(600);
+        map_2.insert("xx".to_string(), "yy".to_string());
+        map_2.insert("aaa".to_string(), "aaa".to_string());
+
+        assert!(map_2.capacity() > map.capacity());
+        let expected_size_2 = map_2.capacity()
+            * (2 * core::mem::size_of::<String>() + core::mem::size_of::<usize>())
+            + (2 + 2 + 3 + 3);
+        assert_eq!(expected_size_2, map_2.estimate_heap_size());
+    }
+
+    #[test]
+    fn test_hashmap_not_dynamic() {
+        assert!(!Box::<u32>::IS_DYNAMIC && !u8::IS_DYNAMIC);
+        let mut map = std::collections::HashMap::new();
+        map.insert(1u8, Box::new(45u32));
+        map.insert(2u8, Box::new(42u32));
+
+        let expected_size = map.capacity()
+            * (1 + core::mem::size_of::<Box<u32>>() + core::mem::size_of::<usize>())
+            + (4 + 4);
+        assert_eq!(expected_size, map.estimate_heap_size());
+
+        let mut map_2 = std::collections::HashMap::with_capacity(600);
+        map_2.insert(1u8, Box::new(45u32));
+        map_2.insert(2u8, Box::new(42u32));
+
+        assert!(map_2.capacity() > map.capacity());
+        let expected_size_2 = map_2.capacity()
+            * (1 + core::mem::size_of::<Box<u32>>() + core::mem::size_of::<usize>())
+            + (4 + 4);
+        assert_eq!(expected_size_2, map_2.estimate_heap_size());
+    }
+
+    #[test]
+    fn test_hashset_dynamic() {
+        let mut set = std::collections::HashSet::new();
+        set.insert("xx".to_string());
+        set.insert("aaa".to_string());
+
+        let expected_size = set.capacity()
+            * (core::mem::size_of::<String>() + core::mem::size_of::<usize>())
+            + (2 + 3);
+        assert_eq!(expected_size, set.estimate_heap_size());
+
+        let mut set_2 = std::collections::HashSet::with_capacity(600);
+        set_2.insert("xx".to_string());
+        set_2.insert("aaa".to_string());
+
+        assert!(set_2.capacity() > set.capacity());
+        let expected_size_2 = set_2.capacity()
+            * (core::mem::size_of::<String>() + core::mem::size_of::<usize>())
+            + (2 + 3);
+        assert_eq!(expected_size_2, set_2.estimate_heap_size());
+    }
+
+    #[test]
+    fn test_hashset_not_dynamic() {
+        assert!(!Box::<u32>::IS_DYNAMIC);
+        let mut set = std::collections::HashSet::new();
+        set.insert(Box::new(45u32));
+        set.insert(Box::new(42u32));
+
+        let expected_size = set.capacity()
+            * (core::mem::size_of::<Box<u32>>() + core::mem::size_of::<usize>())
+            + (4 + 4);
+        assert_eq!(expected_size, set.estimate_heap_size());
+
+        let mut set_2 = std::collections::HashSet::with_capacity(600);
+        set_2.insert(Box::new(45u32));
+        set_2.insert(Box::new(42u32));
+
+        assert!(set_2.capacity() > set.capacity());
+        let expected_size_2 = set_2.capacity()
+            * (core::mem::size_of::<Box<u32>>() + core::mem::size_of::<usize>())
+            + (4 + 4);
+        assert_eq!(expected_size_2, set_2.estimate_heap_size());
     }
 }
