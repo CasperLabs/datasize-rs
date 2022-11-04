@@ -389,6 +389,23 @@ mod tests {
     }
 
     #[test]
+    fn test_enum_variant_with_single_skipped_field() {
+        #[derive(DataSize)]
+        enum Skipper {
+            OnlyVariant {
+                #[data_size(skip)]
+                #[allow(dead_code)]
+                skip_me: Box<u8>,
+            },
+        }
+
+        let specimen = Skipper::OnlyVariant {
+            skip_me: Box::new(123u8),
+        };
+        assert_eq!(data_size(&specimen), 0);
+    }
+
+    #[test]
     fn test_data_size_inner_box() {
         #[derive(Clone, DataSize)]
         struct Inner {
