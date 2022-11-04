@@ -325,13 +325,14 @@ mod tests {
 
     #[test]
     fn test_enum() {
-        #[derive(Debug, DataSize)]
+        #[derive(DataSize)]
         enum Foo {
             Bar,
             Baz {
                 boxed: Box<u32>,
                 nonheap: u8,
                 #[data_size(skip)]
+                #[allow(dead_code)]
                 extra: Box<u128>,
             },
             Bert(Vec<u32>, #[data_size(skip)] Vec<u8>),
