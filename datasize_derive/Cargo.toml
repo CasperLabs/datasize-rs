@@ -17,7 +17,7 @@ detailed = []
 [dependencies]
 proc-macro2 = "1.0.21"
 quote = "1.0.7"
-syn = { version = "1.0.41", features = ["full", "extra-traits"] }
+syn = { version = "1.0.41", features = [ "full", "extra-traits" ] }
 
 [package.metadata.docs.rs]
 all-features = true
