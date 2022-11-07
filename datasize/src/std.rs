@@ -215,6 +215,7 @@ fn estimate_hashbrown_rawtable<T>(capacity: usize) -> usize {
     // Return a lower bound, ignoring its constant contributions
     // (through ctrl_align and Group::WIDTH, at most 31 bytes).
     let ctrl_offset = size * buckets;
+    // Add one byte of "control" metadata per bucket
     ctrl_offset + buckets
 }
 
