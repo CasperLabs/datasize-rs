@@ -198,27 +198,47 @@ where
     }
 }
 
+fn estimate_hashbrown_rawtable<T>(capacity: usize) -> usize {
+    // https://github.com/rust-lang/hashbrown/blob/v0.12.3/src/raw/mod.rs#L185
+    let buckets = if capacity < 8 {
+        if capacity < 4 {
+            4
+        } else {
+            8
+        }
+    } else {
+        (capacity * 8 / 7).next_power_of_two()
+    };
+    // https://github.com/rust-lang/hashbrown/blob/v0.12.3/src/raw/mod.rs#L242
+    let size = size_of::<T>();
+    // `Group` is u32, u64, or __m128i depending on the CPU architecture.
+    // Return a lower bound, ignoring its constant contributions
+    // (through ctrl_align and Group::WIDTH, at most 31 bytes).
+    let ctrl_offset = size * buckets;
+    // Add one byte of "control" metadata per bucket
+    ctrl_offset + buckets
+}
+
 impl<K, V, S> DataSize for std::collections::HashMap<K, V, S>
 where
     K: DataSize,
     V: DataSize,
 {
-    // Approximation directly taken from
-    // https://github.com/servo/heapsize/blob/f565dda63cc12c2a088bc9974a1b584cddec4382/src/lib.rs#L266-L275
     const IS_DYNAMIC: bool = true;
 
     const STATIC_HEAP_SIZE: usize = 0;
 
     #[inline]
     fn estimate_heap_size(&self) -> usize {
-        let size = self.capacity() * (size_of::<V>() + size_of::<K>() + size_of::<usize>());
+        let size = estimate_hashbrown_rawtable::<(K, V)>(self.capacity());
 
         if K::IS_DYNAMIC || V::IS_DYNAMIC {
-            self.iter().fold(size, |n, (key, value)| {
-                n + key.estimate_heap_size() + value.estimate_heap_size()
-            })
+            size + self
+                .iter()
+                .map(|(k, v)| k.estimate_heap_size() + v.estimate_heap_size())
+                .sum::<usize>()
         } else {
-            size + self.capacity() * (K::STATIC_HEAP_SIZE + V::STATIC_HEAP_SIZE)
+            size + self.len() * (K::STATIC_HEAP_SIZE + V::STATIC_HEAP_SIZE)
         }
     }
 }
@@ -227,21 +247,19 @@ impl<T, S> DataSize for std::collections::HashSet<T, S>
 where
     T: DataSize,
 {
-    // Approximation directly taken from
-    // https://github.com/servo/heapsize/blob/f565dda63cc12c2a088bc9974a1b584cddec4382/src/lib.rs#L255-L264
     const IS_DYNAMIC: bool = true;
 
     const STATIC_HEAP_SIZE: usize = 0;
 
     #[inline]
     fn estimate_heap_size(&self) -> usize {
-        let size = self.capacity() * (size_of::<T>() + size_of::<usize>());
+        // HashSet<T> is based on HashMap<T, ()>
+        let size = estimate_hashbrown_rawtable::<(T, ())>(self.capacity());
 
         if T::IS_DYNAMIC {
-            self.iter()
-                .fold(size, |n, value| n + value.estimate_heap_size())
+            size + self.iter().map(T::estimate_heap_size).sum::<usize>()
         } else {
-            size + self.capacity() * T::STATIC_HEAP_SIZE
+            size + self.len() * T::STATIC_HEAP_SIZE
         }
     }
 }
