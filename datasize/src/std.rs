@@ -350,7 +350,7 @@ mod tests {
                 boxed: Box<u32>,
                 nonheap: u8,
                 #[data_size(skip)]
-                extra: Box<u128>,
+                _extra: Box<u128>,
             },
             Bert(Vec<u32>, #[data_size(skip)] Vec<u8>),
             #[data_size(skip)]
@@ -363,7 +363,7 @@ mod tests {
         let baz = Foo::Baz {
             boxed: Box::new(123),
             nonheap: 99,
-            extra: Box::new(456),
+            _extra: Box::new(456),
         };
         assert_eq!(data_size(&baz), 4);
 

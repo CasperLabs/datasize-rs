@@ -33,10 +33,10 @@ pub fn derive_data_size(input: TokenStream) -> TokenStream {
 /// postives in some cases.
 fn contains_generic(generics: &Generics, ty: &Type) -> bool {
     match ty {
-        Type::Array(TypeArray { elem, .. }) => contains_generic(generics, &elem),
+        Type::Array(TypeArray { elem, .. }) => contains_generic(generics, elem),
         Type::BareFn(TypeBareFn { inputs, output, .. }) => {
             for arg in inputs {
-                if contains_generic(&generics, &arg.ty) {
+                if contains_generic(generics, &arg.ty) {
                     return true;
                 }
             }
@@ -215,7 +215,7 @@ impl DataSizeAttributes {
 
             // Ensure it is a `data_size` attribute.
             if attr.path.segments.len() != 1
-                || attr.path.segments[0].ident.to_string() != "data_size"
+                || attr.path.segments[0].ident != "data_size"
             {
                 continue;
             }
