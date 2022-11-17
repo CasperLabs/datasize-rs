@@ -214,9 +214,7 @@ impl DataSizeAttributes {
             }
 
             // Ensure it is a `data_size` attribute.
-            if attr.path.segments.len() != 1
-                || attr.path.segments[0].ident != "data_size"
-            {
+            if attr.path.segments.len() != 1 || attr.path.segments[0].ident != "data_size" {
                 continue;
             }
 
