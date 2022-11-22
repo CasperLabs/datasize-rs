@@ -199,6 +199,7 @@
 //! ```
 
 #![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::assertions_on_constants)]
 
 #[cfg(feature = "fake_clock-types")]
 mod fake_clock;
