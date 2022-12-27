@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [0.2.11] - 2022-04-11
 
-## Fixed
+### Fixed
 
 * An enum variant with no fields will no longer cause a compilation failiure when deriving `DataSize`.
 
