@@ -472,6 +472,10 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
             }
         }
 
+        if field_calc.is_empty() {
+            field_calc.extend(quote!(0));
+        }
+
         match_arms.extend(quote!(
             #name::#variant_ident #field_match => { #field_calc }
         ));

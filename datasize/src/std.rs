@@ -343,13 +343,14 @@ mod tests {
 
     #[test]
     fn test_enum() {
-        #[derive(Debug, DataSize)]
+        #[derive(DataSize)]
         enum Foo {
             Bar,
             Baz {
                 boxed: Box<u32>,
                 nonheap: u8,
                 #[data_size(skip)]
+                #[allow(dead_code)]
                 _extra: Box<u128>,
             },
             Bert(Vec<u32>, #[data_size(skip)] Vec<u8>),
@@ -403,6 +404,23 @@ mod tests {
             c: 123,
         };
         assert_eq!(data_size(&both), 5);
+    }
+
+    #[test]
+    fn test_enum_variant_with_single_skipped_field() {
+        #[derive(DataSize)]
+        enum Skipper {
+            OnlyVariant {
+                #[data_size(skip)]
+                #[allow(dead_code)]
+                skip_me: Box<u8>,
+            },
+        }
+
+        let specimen = Skipper::OnlyVariant {
+            skip_me: Box::new(123u8),
+        };
+        assert_eq!(data_size(&specimen), 0);
     }
 
     #[test]
