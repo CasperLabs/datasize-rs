@@ -182,6 +182,16 @@
 //! on the standard library. This can be used to derive the `DataSize` trait for types without
 //! boilerplate, even though their heap size will usually be 0.
 //!
+//! ## Arrays and const generics
+//!
+//! By default, this crate requires at least Rust version 1.51.0, in order to implement DataSize
+//! for [T; N] arrays generically. This implementation is provided by the "const-generics"
+//! feature flag, which is enabled by default. In order to use an older Rust version,
+//! you can specify [`default-features = false`](https://doc.rust-lang.org/cargo/reference/features.html#dependency-features) and `features = ["std"]` for `datasize` in your Cargo.toml.
+//!
+//! When the `const-generics` feature flag is disabled, a DataSize implementation will be provided
+//! for arrays of small sizes, and for some larger sizes related to powers of 2.
+//!
 //! ## Known issues
 //!
 //! The derive macro currently does not support generic structs with inline type bounds, e.g.
@@ -329,6 +339,7 @@ macro_rules! tuple_heap_size {
     };
 }
 
+#[cfg(not(feature = "const-generics"))]
 macro_rules! array_heap_size {
     ($($n:tt)+) => {
         $(
@@ -388,7 +399,27 @@ where
     }
 }
 
+#[cfg(not(feature = "const-generics"))]
 array_heap_size!(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 128 192 256 384 512 1024 2048 4096 8192 16384 1048576 2097152 3145728 4194304);
+
+#[cfg(feature = "const-generics")]
+impl<T, const N: usize> DataSize for [T; N]
+where
+    T: DataSize,
+{
+    const IS_DYNAMIC: bool = T::IS_DYNAMIC;
+
+    const STATIC_HEAP_SIZE: usize = T::STATIC_HEAP_SIZE * N;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        if T::IS_DYNAMIC {
+            (&self[..]).iter().map(DataSize::estimate_heap_size).sum()
+        } else {
+            T::STATIC_HEAP_SIZE * N
+        }
+    }
+}
 
 // REFERENCES
 
