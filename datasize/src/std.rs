@@ -44,6 +44,24 @@ impl DataSize for Box<str> {
     }
 }
 
+impl<T> DataSize for Box<[T]>
+where
+    T: DataSize,
+{
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        if T::IS_DYNAMIC {
+            self.iter().map(DataSize::estimate_heap_size).sum()
+        } else {
+            self.len() * size_of::<T>()
+        }
+    }
+}
+
 impl<'a, T> DataSize for Cow<'a, T>
 where
     T: 'a + ToOwned + ?Sized,
@@ -297,6 +315,14 @@ mod tests {
 
         assert_eq!(data_size::<Option<Box<u64>>>(&value_none), 0);
         assert_eq!(data_size::<Option<Box<u64>>>(&value_some), 8);
+    }
+
+    #[test]
+    fn test_box_slice() {
+        let value: Box<[u8]> = Box::from(b"abcdef".as_slice());
+
+        assert_eq!(data_size::<Box<[u8]>>(&value), 6);
+        assert_eq!(data_size(&value), 6);
     }
 
     #[test]
