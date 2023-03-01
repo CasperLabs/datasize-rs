@@ -32,6 +32,18 @@ where
     }
 }
 
+impl DataSize for Box<str> {
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        // Total size of owned buffer
+        self.len()
+    }
+}
+
 impl<'a, T> DataSize for Cow<'a, T>
 where
     T: 'a + ToOwned + ?Sized,
@@ -301,6 +313,14 @@ mod tests {
     fn test_string() {
         let value = "abcdef".to_string();
 
+        assert_eq!(data_size(&value), 6);
+    }
+
+    #[test]
+    fn test_box_str() {
+        let value: Box<str> = Box::from("abcdef");
+
+        assert_eq!(data_size::<Box<str>>(&value), 6);
         assert_eq!(data_size(&value), 6);
     }
 
