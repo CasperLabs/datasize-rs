@@ -17,6 +17,27 @@ non_dynamic_const_heap_size!(
   0
 );
 
+macro_rules! forward_for_unit_structs {
+    ( $($name:path,)* ) => {
+        $(
+            impl<T> DataSize for $name
+            where
+                T: DataSize,
+            {
+                const IS_DYNAMIC: bool = <T as DataSize>::IS_DYNAMIC;
+
+                const STATIC_HEAP_SIZE: usize = <T as DataSize>::STATIC_HEAP_SIZE;
+
+                fn estimate_heap_size(&self) -> usize {
+                    self.0.estimate_heap_size()
+                }
+            }
+        )*
+    };
+}
+
+forward_for_unit_structs!(std::panic::AssertUnwindSafe<T>, std::cmp::Reverse<T>,);
+
 impl<T> DataSize for Box<T>
 where
     T: DataSize,
