@@ -219,6 +219,26 @@ where
     }
 }
 
+impl<T> DataSize for std::collections::BinaryHeap<T>
+where
+    T: DataSize,
+{
+    // Just like BTreeSet
+
+    const IS_DYNAMIC: bool = true;
+
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        if T::IS_DYNAMIC {
+            self.len() * size_of::<T>() + self.iter().map(T::estimate_heap_size).sum::<usize>()
+        } else {
+            self.len() * (size_of::<T>() + T::STATIC_HEAP_SIZE)
+        }
+    }
+}
+
 fn estimate_hashbrown_rawtable<T>(capacity: usize) -> usize {
     // https://github.com/rust-lang/hashbrown/blob/v0.12.3/src/raw/mod.rs#L185
     let buckets = if capacity < 8 {
