@@ -675,4 +675,13 @@ mod tests {
         };
         assert_eq!(value.estimate_heap_size(), 1234);
     }
+
+    #[test]
+    fn derive_with_default_values_for_generic_parameters() {
+        #[derive(DataSize)]
+        enum E<T = u32> {
+            One(T),
+            Two(T),
+        }
+    }
 }

@@ -18,12 +18,24 @@ use syn::{
 #[proc_macro_derive(DataSize, attributes(data_size))]
 pub fn derive_data_size(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
+    let input = remove_default_generic_values(input);
 
     match input.data {
         syn::Data::Struct(ds) => derive_for_struct(input.ident, input.generics, ds),
         syn::Data::Enum(de) => derive_for_enum(input.ident, input.generics, de),
         syn::Data::Union(_) => panic!("unions not supported"),
     }
+}
+
+fn remove_default_generic_values(mut input: DeriveInput) -> DeriveInput {
+    for param in input.generics.params.iter_mut() {
+        if let syn::GenericParam::Type(ty) = param {
+            ty.eq_token = None;
+            ty.default = None;
+        }
+    }
+
+    input
 }
 
 /// Returns whether any of the `generics` show up in `ty`.
