@@ -1,6 +1,6 @@
 [package]
 name = "datasize_derive"
-version = "0.2.13"
+version = "0.2.14"
 authors = [ "Marc Brinkmann <marc@casperlabs.io>" ]
 edition = "2018"
 license = "MIT OR Apache-2.0"
