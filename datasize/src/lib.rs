@@ -414,7 +414,7 @@ where
     #[inline]
     fn estimate_heap_size(&self) -> usize {
         if T::IS_DYNAMIC {
-            (&self[..]).iter().map(DataSize::estimate_heap_size).sum()
+            self[..].iter().map(DataSize::estimate_heap_size).sum()
         } else {
             T::STATIC_HEAP_SIZE * N
         }
