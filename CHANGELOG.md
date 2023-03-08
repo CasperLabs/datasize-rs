@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+## Added
+
+* Support for arbitrary arrays using const generics has been added under the `const-generics` feature.
+* Support for `Box<[T: DataSize]>` and `Box<str>` has been added.
+* Support for structs with default values in generic parameters has been added.
+* Support for `AssertUnwindSafe<T>` and `Reverse<T>` has been added.
+* Support for `BinaryHeap` has been added.
+
 ## [0.2.13] - 2022-12-27
 
 Replaces `0.2.12`, which was yanked.
