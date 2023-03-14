@@ -22,6 +22,7 @@
 //! use datasize::data_size;
 //!
 //! let data: Vec<u64> = vec![1, 2, 3];
+//! #[cfg(feature = "std")]
 //! assert_eq!(data_size(&data), 24);
 //! ```
 //!
@@ -33,6 +34,7 @@
 //! ```rust
 //! use datasize::DataSize;
 //!
+//! #[cfg(feature = "std")]
 //! // A `Vec` of any kind may have elements added or removed, so it changes size.
 //! assert!(Vec::<u64>::IS_DYNAMIC);
 //!
@@ -49,7 +51,9 @@
 //! ```rust
 //! use datasize::DataSize;
 //!
+//! #[cfg(feature = "std")]
 //! assert_eq!(Box::<u64>::STATIC_HEAP_SIZE, 8);
+//! #[cfg(feature = "std")]
 //! assert!(!Box::<u64>::IS_DYNAMIC);
 //! ```
 //!
@@ -71,6 +75,7 @@
 //!     value.len() * 512
 //! }
 //!
+//! #[cfg(feature = "std")]
 //! #[derive(DataSize)]
 //! struct MyStruct {
 //!     items: Vec<u32>,
@@ -94,6 +99,7 @@
 //!     counter: Box<u64>,
 //! }
 //!
+//! #[cfg(feature = "std")]
 //! impl DataSize for MyType {
 //!     // `MyType` contains a `Vec`, so `IS_DYNAMIC` is set to true.
 //!     const IS_DYNAMIC: bool = true;
@@ -114,6 +120,7 @@
 //!     counter: Box::new(42),
 //! };
 //!
+//! #[cfg(feature = "std")]
 //! // Three i64 and one u64 on the heap sum up to 32 bytes:
 //! assert_eq!(data_size(&my_data), 32);
 //! ```
@@ -124,17 +131,20 @@
 //! ```
 //! # use datasize::{DataSize, data_size};
 //! // Equivalent to the manual implementation above:
+//! #[cfg(feature = "std")]
 //! #[derive(DataSize)]
 //! struct MyType {
 //!     items: Vec<i64>,
 //!     flag: bool,
 //!     counter: Box<u64>,
 //! }
+//! # #[cfg(feature = "std")]
 //! # let my_data = MyType {
 //! #     items: vec![1, 2, 3],
 //! #     flag: true,
 //! #     counter: Box::new(42),
 //! # };
+//! # #[cfg(feature = "std")]
 //! # assert_eq!(data_size(&my_data), 32);
 //! ```
 //!
@@ -555,25 +565,39 @@ mod tests {
         assert_eq!(Result::<u8, u16>::STATIC_HEAP_SIZE, 0);
         assert!(!Result::<u8, u16>::IS_DYNAMIC);
 
+        #[cfg(feature = "std")]
         assert_eq!(Result::<u8, Box<u16>>::STATIC_HEAP_SIZE, 0);
+        #[cfg(feature = "std")]
         assert!(Result::<u8, Box<u16>>::IS_DYNAMIC);
 
+        #[cfg(feature = "std")]
         assert_eq!(Result::<Box<u8>, u16>::STATIC_HEAP_SIZE, 0);
+        #[cfg(feature = "std")]
         assert!(Result::<Box<u8>, u16>::IS_DYNAMIC);
 
+        #[cfg(feature = "std")]
         assert_eq!(Result::<Box<u8>, Box<u16>>::STATIC_HEAP_SIZE, 1);
+        #[cfg(feature = "std")]
         assert!(Result::<Box<u8>, Box<u16>>::IS_DYNAMIC);
 
+        #[cfg(feature = "std")]
         assert_eq!(Result::<Box<u16>, Box<u16>>::STATIC_HEAP_SIZE, 2);
+        #[cfg(feature = "std")]
         assert!(!Result::<Box<u16>, Box<u16>>::IS_DYNAMIC);
 
+        #[cfg(feature = "std")]
         assert_eq!(Result::<u16, Vec<u16>>::STATIC_HEAP_SIZE, 0);
+        #[cfg(feature = "std")]
         assert!(Result::<u16, Vec<u16>>::IS_DYNAMIC);
 
+        #[cfg(feature = "std")]
         assert_eq!(Result::<Vec<u16>, u16>::STATIC_HEAP_SIZE, 0);
+        #[cfg(feature = "std")]
         assert!(Result::<Vec<u16>, u16>::IS_DYNAMIC);
 
+        #[cfg(feature = "std")]
         assert_eq!(Result::<Vec<u16>, Vec<u16>>::STATIC_HEAP_SIZE, 0);
+        #[cfg(feature = "std")]
         assert!(Result::<Vec<u16>, Vec<u16>>::IS_DYNAMIC);
     }
 
