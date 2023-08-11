@@ -111,7 +111,27 @@ impl<T: ?Sized> DataSize for std::sync::Arc<T> {
     }
 }
 
+impl<T: ?Sized> DataSize for std::sync::Weak<T> {
+    const IS_DYNAMIC: bool = false;
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        0
+    }
+}
+
 impl<T: ?Sized> DataSize for std::rc::Rc<T> {
+    const IS_DYNAMIC: bool = false;
+    const STATIC_HEAP_SIZE: usize = 0;
+
+    #[inline]
+    fn estimate_heap_size(&self) -> usize {
+        0
+    }
+}
+
+impl<T: ?Sized> DataSize for std::rc::Weak<T> {
     const IS_DYNAMIC: bool = false;
     const STATIC_HEAP_SIZE: usize = 0;
 
