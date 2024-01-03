@@ -443,7 +443,7 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
                         if !field_calc.is_empty() {
                             field_calc.extend(quote!(+));
                         }
-                        field_calc.extend(quote!(DataSize::estimate_heap_size(#ident)));
+                        field_calc.extend(quote!(datasize::DataSize::estimate_heap_size(#ident)));
                     }
                 }
 
@@ -468,7 +468,7 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
                         if !field_calc.is_empty() {
                             field_calc.extend(quote!(+));
                         }
-                        field_calc.extend(quote!(DataSize::estimate_heap_size(#ident)));
+                        field_calc.extend(quote!(datasize::DataSize::estimate_heap_size(#ident)));
 
                         let ty = field.ty;
                         where_types.extend(quote!(#ty : datasize::DataSize,));
@@ -529,7 +529,7 @@ fn derive_for_enum(name: Ident, generics: Generics, de: DataEnum) -> TokenStream
     }
 
     TokenStream::from(quote! {
-        impl #generics DataSize for #name #generics #where_clause {
+        impl #generics datasize::DataSize for #name #generics #where_clause {
 
             const IS_DYNAMIC: bool = #is_dynamic;
             const STATIC_HEAP_SIZE: usize = #static_heap_size;
